@@ -188,3 +188,32 @@ INSERT INTO favoritos (idCliente, idAudio) VALUES
 (1, 3), -- Juan le dio like a Older
 (2, 6); -- Elena le dio like a Believer
 
+----------------------------------------------------------------------------------------------------
+-- ===== VISTAS PARA ESTADÍSTICAS =====
+DROP VIEW IF EXISTS cancionesmasescuchadas;
+CREATE VIEW cancionesmasescuchadas AS
+SELECT a.idAudio AS idCancion, a.nombre, a.nReproducciones
+FROM audio a
+JOIN cancion c ON a.idAudio = c.idCancion
+ORDER BY a.nReproducciones DESC;
+
+DROP VIEW IF EXISTS audiosmasescuchados;
+CREATE VIEW audiosmasescuchados AS
+SELECT a.idAudio, a.nombre, a.tipo, a.nReproducciones
+FROM audio a
+ORDER BY a.nReproducciones DESC;
+
+DROP VIEW IF EXISTS podcastmasescuchado;
+CREATE VIEW podcastmasescuchado AS
+SELECT p.idPodcast, a.nombre, a.nReproducciones
+FROM podcast p
+JOIN audio a ON p.idPodcast = a.idAudio
+ORDER BY a.nReproducciones DESC;
+
+DROP VIEW IF EXISTS playlistmasescuchada;
+CREATE VIEW playlistmasescuchada AS
+SELECT pl.idPlaylist, pl.titulo, COUNT(pc.idCancion) AS totalCanciones
+FROM playlist pl
+LEFT JOIN playlist_canciones pc ON pl.idPlaylist = pc.idPlaylist
+GROUP BY pl.idPlaylist, pl.titulo
+ORDER BY totalCanciones DESC;
