@@ -209,21 +209,28 @@ public class ControladorDB {
 	}
 	
 	// Cerrar conexion
-		public boolean closeConnection() {
-			boolean connectionClosed = false;
+	public boolean closeConnection() {
+		boolean connectionClosed = false;
 
-			try {
-				if (conect != null && !conect.isClosed()) {
-					conect.close();
-					connectionClosed = true;
-				}
-			} catch (SQLException e) {
-				System.out.println("Error cerrando conexion: " + e.getMessage());
+		try {
+			if (conect != null && !conect.isClosed()) {
+				conect.close();
+				connectionClosed = true;
 			}
-			return connectionClosed;
+		} catch (SQLException e) {
+			System.out.println("Error cerrando conexion: " + e.getMessage());
 		}
+		return connectionClosed;
+	}
 
-		private Integer resolverIdioma(String idioma) {
+	/**
+	 * Obtiene la conexión activa (para uso en otras clases)
+	 */
+	public Connection getConnection() {
+		return this.conect;
+	}
+
+	private Integer resolverIdioma(String idioma) {
 			if (idioma == null || idioma.trim().isEmpty()) {
 				return null;
 			}
@@ -636,6 +643,460 @@ public class ControladorDB {
 				e.printStackTrace();
 			}
 			return statisticasPlaylist;
+		}
+
+		// ============ MÉTODOS PARA VALIDACIÓN DE LÓGICA DE NEGOCIO ============
+
+		/**
+		 * Cuenta el número de playlists que tiene un usuario Free
+		 */
+		public int contarPlaylistsUsuario(int idCliente) {
+			if (!hayConexionActiva()) {
+				return -1;
+			}
+
+			String sql = "SELECT COUNT(*) as total FROM playlist WHERE idCliente = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return rs.getInt("total");
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error contando playlists: " + e.getMessage());
+			}
+			return -1;
+		}
+
+		/**
+		 * Valida si un usuario puede crear una nueva playlist (máximo 3 para Free)
+		 */
+		public boolean puedeCrearPlaylist(int idCliente, boolean esPremium) {
+			if (esPremium) {
+				return true;
+			}
+
+			int playlistCount = contarPlaylistsUsuario(idCliente);
+			return playlistCount < 3;
+		}
+
+		/**
+		 * Registra la última reproducción de un audio por un usuario
+		 */
+		public boolean registrarUltimaReproduccion(int idCliente, int idAudio) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sqlCreateTable = "CREATE TABLE IF NOT EXISTS reproduccion_usuario (" +
+					"idCliente INT, idAudio INT, ultimaReproduccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+					"PRIMARY KEY (idCliente, idAudio), " +
+					"CONSTRAINT fk_repuser_cliente FOREIGN KEY (idCliente) REFERENCES cliente(idCliente) ON DELETE CASCADE, " +
+					"CONSTRAINT fk_repuser_audio FOREIGN KEY (idAudio) REFERENCES audio(idAudio) ON DELETE CASCADE)";
+
+			String sqlInsertUpdate = "INSERT INTO reproduccion_usuario (idCliente, idAudio, ultimaReproduccion) " +
+					"VALUES (?, ?, CURRENT_TIMESTAMP) " +
+					"ON DUPLICATE KEY UPDATE ultimaReproduccion = CURRENT_TIMESTAMP";
+
+			try {
+				try (Statement stmt = conect.createStatement()) {
+					stmt.execute(sqlCreateTable);
+				}
+
+				try (PreparedStatement ps = conect.prepareStatement(sqlInsertUpdate)) {
+					ps.setInt(1, idCliente);
+					ps.setInt(2, idAudio);
+					return ps.executeUpdate() > 0;
+				}
+			} catch (SQLException e) {
+				System.out.println("Error registrando reproducción: " + e.getMessage());
+			}
+			return false;
+		}
+
+		/**
+		 * Valida si un usuario Free puede reproducir una canción
+		 * (debe esperar 10 minutos desde la última reproducción)
+		 */
+		public boolean puedeReproducirCancion(int idCliente, int idAudio, boolean esPremium) {
+			if (esPremium) {
+				return true;
+			}
+
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "SELECT ultimaReproduccion FROM reproduccion_usuario WHERE idCliente = ? AND idAudio = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				ps.setInt(2, idAudio);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						java.sql.Timestamp ultimaReproduccion = rs.getTimestamp("ultimaReproduccion");
+						long tiempoTranscurrido = System.currentTimeMillis() - ultimaReproduccion.getTime();
+						long diezMinutos = 10 * 60 * 1000; // 10 minutos en milisegundos
+						return tiempoTranscurrido >= diezMinutos;
+					}
+					return true; // Primera vez reproduciendo
+				}
+			} catch (SQLException e) {
+				System.out.println("Error validando reproducción: " + e.getMessage());
+				return false;
+			}
+		}
+
+		// ============ MÉTODOS CRUD PARA ADMINISTRADOR: ARTISTAS ============
+
+		/**
+		 * Obtiene un artista por su nombre
+		 */
+		public Artista obtenerArtistaPorNombre(String nombreArtistico) {
+			if (!hayConexionActiva()) {
+				return null;
+			}
+
+			String sql = "SELECT idArtista, nombreArtistico, imagen, genero, descripcion FROM artista WHERE nombreArtistico = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, nombreArtistico);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return new Artista(rs.getInt("idArtista"), rs.getString("nombreArtistico"),
+								rs.getString("genero"), rs.getString("descripcion"), rs.getString("imagen"));
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error obteniendo artista: " + e.getMessage());
+			}
+			return null;
+		}
+
+		/**
+		 * Actualiza los datos de un artista
+		 */
+		public boolean actualizarArtista(int idArtista, String nombreArtistico, String genero, String descripcion,
+				String imagen) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "UPDATE artista SET nombreArtistico = ?, genero = ?, descripcion = ?, imagen = ? WHERE idArtista = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, nombreArtistico);
+				ps.setString(2, genero);
+				ps.setString(3, descripcion);
+				ps.setString(4, imagen);
+				ps.setInt(5, idArtista);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error actualizando artista: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Elimina un artista (y sus datos asociados en cascada)
+		 */
+		public boolean eliminarArtista(int idArtista) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM artista WHERE idArtista = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idArtista);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando artista: " + e.getMessage());
+				return false;
+			}
+		}
+
+		// ============ MÉTODOS CRUD PARA ADMINISTRADOR: ÁLBUMES ============
+
+		/**
+		 * Obtiene los detalles de un álbum por su título
+		 */
+		public Album obtenerAlbumPorTitulo(String titulo) {
+			if (!hayConexionActiva()) {
+				return null;
+			}
+
+			String sql = "SELECT idAlbum, titulo, ano, genero, imagen, idMusico FROM album WHERE titulo = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, titulo);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return new Album(rs.getInt("idAlbum"), rs.getString("titulo"), rs.getString("ano"),
+								rs.getString("genero"), rs.getString("imagen"), rs.getInt("idMusico"));
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error obteniendo álbum: " + e.getMessage());
+			}
+			return null;
+		}
+
+		/**
+		 * Actualiza los datos de un álbum
+		 */
+		public boolean actualizarAlbum(int idAlbum, String titulo, String ano, String genero, String imagen,
+				int idMusico) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "UPDATE album SET titulo = ?, ano = ?, genero = ?, imagen = ?, idMusico = ? WHERE idAlbum = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, titulo);
+				ps.setString(2, ano);
+				ps.setString(3, genero);
+				ps.setString(4, imagen);
+				ps.setInt(5, idMusico);
+				ps.setInt(6, idAlbum);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error actualizando álbum: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Elimina un álbum
+		 */
+		public boolean eliminarAlbum(int idAlbum) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM album WHERE idAlbum = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idAlbum);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando álbum: " + e.getMessage());
+				return false;
+			}
+		}
+
+		// ============ MÉTODOS CRUD PARA ADMINISTRADOR: CANCIONES ============
+
+		/**
+		 * Obtiene los detalles de una canción por su nombre
+		 */
+		public Cancion obtenerCancionPorNombre(String nombreCancion) {
+			if (!hayConexionActiva()) {
+				return null;
+			}
+
+			String sql = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, c.idAlbum, c.artistasInvitados " +
+					"FROM audio a JOIN cancion c ON c.idCancion = a.idAudio WHERE a.nombre = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, nombreCancion);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return new Cancion(rs.getInt("idAudio"), rs.getString("nombre"), rs.getString("archivo"),
+								rs.getString("duracion"), rs.getInt("nReproducciones"), rs.getInt("idAlbum"),
+								rs.getString("artistasInvitados"));
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error obteniendo canción: " + e.getMessage());
+			}
+			return null;
+		}
+
+		/**
+		 * Actualiza los datos de una canción
+		 */
+		public boolean actualizarCancion(int idCancion, String nombre, String archivo, String duracion, int idAlbum,
+				String artistasInvitados) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sqlAudio = "UPDATE audio SET nombre = ?, archivo = ?, duracion = ? WHERE idAudio = ?";
+			String sqlCancion = "UPDATE cancion SET idAlbum = ?, artistasInvitados = ? WHERE idCancion = ?";
+
+			try (PreparedStatement psAudio = conect.prepareStatement(sqlAudio);
+					PreparedStatement psCancion = conect.prepareStatement(sqlCancion)) {
+
+				psAudio.setString(1, nombre);
+				psAudio.setString(2, archivo);
+				psAudio.setString(3, duracion);
+				psAudio.setInt(4, idCancion);
+				psAudio.executeUpdate();
+
+				psCancion.setInt(1, idAlbum);
+				psCancion.setString(2, artistasInvitados);
+				psCancion.setInt(3, idCancion);
+				return psCancion.executeUpdate() > 0;
+
+			} catch (SQLException e) {
+				System.out.println("Error actualizando canción: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Elimina una canción
+		 */
+		public boolean eliminarCancion(int idCancion) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM cancion WHERE idCancion = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCancion);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando canción: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Actualiza el cliente (tipo Premium/Free, datos personales)
+		 */
+		public boolean actualizarCliente(Cliente c) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String tipo = c.isEsPremium() ? "Premium" : "Free";
+			String sql = "UPDATE cliente SET nombre = ?, apellidos = ?, usuario = ?, contrasena = ?, tipo = ? WHERE idCliente = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, c.getNombre());
+				ps.setString(2, c.getApellido());
+				ps.setString(3, c.getUsuario());
+				ps.setString(4, c.getContrasena());
+				ps.setString(5, tipo);
+				ps.setInt(6, c.getId());
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error actualizando cliente: " + e.getMessage());
+				return false;
+			}
+		}
+
+		// ============ MÉTODOS PARA GESTIÓN DE FAVORITOS ============
+
+		/**
+		 * Obtiene todos los audios favoritos de un cliente
+		 */
+		public ArrayList<Audio> obtenerFavoritos(int idCliente) {
+			ArrayList<Audio> favoritos = new ArrayList<>();
+			if (!hayConexionActiva()) {
+				return favoritos;
+			}
+
+			String sql = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, a.tipo " +
+					"FROM audio a JOIN favoritos f ON a.idAudio = f.idAudio WHERE f.idCliente = ? " +
+					"ORDER BY a.nombre";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				try (ResultSet rs = ps.executeQuery()) {
+					while (rs.next()) {
+						Audio audio = crearAudioDesdeResultSet(rs);
+						if (audio != null) {
+							favoritos.add(audio);
+						}
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error obteniendo favoritos: " + e.getMessage());
+			}
+			return favoritos;
+		}
+
+		/**
+		 * Verifica si un audio está en favoritos de un cliente
+		 */
+		public boolean estaEnFavoritos(int idCliente, int idAudio) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "SELECT COUNT(*) as total FROM favoritos WHERE idCliente = ? AND idAudio = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				ps.setInt(2, idAudio);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return rs.getInt("total") > 0;
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error verificando favorito: " + e.getMessage());
+			}
+			return false;
+		}
+
+		/**
+		 * Agrega un audio a favoritos de un cliente
+		 */
+		public boolean agregarAFavoritos(int idCliente, int idAudio) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "INSERT INTO favoritos (idCliente, idAudio) VALUES (?, ?)";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				ps.setInt(2, idAudio);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				if (e instanceof SQLIntegrityConstraintViolationException) {
+					// Ya existe en favoritos
+					return false;
+				}
+				System.out.println("Error agregando a favoritos: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Elimina un audio de favoritos de un cliente
+		 */
+		public boolean eliminarDeFavoritos(int idCliente, int idAudio) {
+			if (!hayConexionActiva()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM favoritos WHERE idCliente = ? AND idAudio = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idCliente);
+				ps.setInt(2, idAudio);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando de favoritos: " + e.getMessage());
+				return false;
+			}
+		}
+
+		/**
+		 * Helper: Crear un objeto Audio desde un ResultSet
+		 */
+		private Audio crearAudioDesdeResultSet(ResultSet rs) throws SQLException {
+			try {
+				int id = rs.getInt("idAudio");
+				String nombre = rs.getString("nombre");
+				String archivo = rs.getString("archivo");
+				int duracion = rs.getInt("duracion");
+				int nRep = rs.getInt("nReproducciones");
+				String tipo = rs.getString("tipo");
+
+				if ("Cancion".equalsIgnoreCase(tipo)) {
+					return new Cancion(id, nombre, archivo, duracion, nRep, 0, null, tipo);
+				} else if ("Podcast".equalsIgnoreCase(tipo)) {
+					return new Podcast(id, nombre, archivo, duracion, nRep, null, 0, tipo);
+				}
+			} catch (Exception e) {
+				System.out.println("Error creando audio: " + e.getMessage());
+			}
+			return null;
 		}
 
 }
