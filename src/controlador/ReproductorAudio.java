@@ -558,7 +558,7 @@ public class ReproductorAudio {
 		}
 
 		StringBuilder resumen = new StringBuilder();
-		resumen.append("=== COLA DE REPRODUCCIÓN (").append(colaReproduccion.size()).append(" audios) ===\n");
+		resumen.append("=== COLA DE REPRODUCCIÓN (" ).append(colaReproduccion.size()).append(" audios) ===\n");
 
 		int inicio = Math.max(0, indiceActual - 2);
 		int fin = Math.min(colaReproduccion.size(), indiceActual + 3);

@@ -763,7 +763,8 @@ public class ControladorDB {
 				try (ResultSet rs = ps.executeQuery()) {
 					if (rs.next()) {
 						return new Artista(rs.getInt("idArtista"), rs.getString("nombreArtistico"),
-								rs.getString("genero"), rs.getString("descripcion"), rs.getString("imagen"));
+								rs.getString("genero"), rs.getString("descripcion"), rs.getString("imagen")) {
+						};
 					}
 				}
 			} catch (SQLException e) {
@@ -896,9 +897,11 @@ public class ControladorDB {
 				ps.setString(1, nombreCancion);
 				try (ResultSet rs = ps.executeQuery()) {
 					if (rs.next()) {
+						Time duracion = rs.getTime("duracion");
+						int duracionSegundos = duracion != null ? duracion.toLocalTime().toSecondOfDay() : 0;
 						return new Cancion(rs.getInt("idAudio"), rs.getString("nombre"), rs.getString("archivo"),
-								rs.getString("duracion"), rs.getInt("nReproducciones"), rs.getInt("idAlbum"),
-								rs.getString("artistasInvitados"));
+								duracionSegundos, rs.getInt("nReproducciones"), rs.getInt("idAlbum"),
+								rs.getString("artistasInvitados"), "cancion");
 					}
 				}
 			} catch (SQLException e) {
@@ -1091,7 +1094,7 @@ public class ControladorDB {
 				if ("Cancion".equalsIgnoreCase(tipo)) {
 					return new Cancion(id, nombre, archivo, duracion, nRep, 0, null, tipo);
 				} else if ("Podcast".equalsIgnoreCase(tipo)) {
-					return new Podcast(id, nombre, archivo, duracion, nRep, null, 0, tipo);
+					return new Podcast(id, nombre, archivo, duracion, nRep, 0, 0, tipo);
 				}
 			} catch (Exception e) {
 				System.out.println("Error creando audio: " + e.getMessage());

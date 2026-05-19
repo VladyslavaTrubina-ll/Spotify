@@ -3,17 +3,18 @@ package vista;
 import controlador.ControladorDB;
 import controlador.ControladorEntradaYSalida;
 import controlador.GestorCliente;
-import java.sql.Date;
 import java.util.ArrayList;
 import modelo.Album;
 import modelo.Cancion;
 
-import controlador.ReproductorAudio;
 import modelo.Audio;
 import modelo.Cliente;
 import modelo.Playlist;
 import java.util.stream.Collectors;
+import controlador.*;
 public class Launcher {
+
+	private static final String NOMBRE_BD = "spoti";
 
 
         private static GestorCliente gestorCliente;
@@ -22,14 +23,14 @@ public class Launcher {
 
         public static void main(String[] args) {
             entrada = new ControladorEntradaYSalida();
-            gestorCliente = new GestorCliente();
+            gestorCliente = new GestorCliente(NOMBRE_BD);
 
             mostrarPantallaBienvenida();
             menuPrincipal();
         }
     private static void mostrarPantallaBienvenida() {
         System.out.println("\n╔════════════════════════════════════════╗");
-        System.out.println("║      ♫ BIENVENIDO A SPOTIFY ♫         ║");
+        System.out.println("║      BIENVENIDO A SPOTIFY           ║");
         System.out.println("╚════════════════════════════════════════╝\n");
     }
 
@@ -53,42 +54,42 @@ public class Launcher {
                     registrarse();
                     break;
                 case 0:
-                    System.out.println("\n✗ Hasta luego...");
+                    System.out.println("\nHasta luego...");
                     return;
             }
         }
     }
 
     private static void login() {
-        String usuario = entrada.leerCadena("👤 Ingresa tu usuario: ");
-        String contrasena = entrada.leerCadena("🔐 Ingresa tu contraseña: ");
+        String usuario = entrada.leerCadena("Ingresa tu usuario: ");
+        String contrasena = entrada.leerCadena("Ingresa tu contraseña: ");
 
-        if (gestorCliente.login(usuario, contrasena)) {
-            System.out.println("\n✓ ¡Bienvenido, " + gestorCliente.getClienteActual().getNombre() + "!");
+        Cliente cliente = gestorCliente.login(usuario, contrasena);
+        if (cliente != null) {
+            System.out.println("\n¡Bienvenido, " + gestorCliente.getClienteActual().getNombre() + "!");
             menuCliente();
         } else {
-            System.out.println("\n✗ Usuario o contraseña incorrectos.");
+            System.out.println("\nUsuario o contraseña incorrectos.");
         }
     }
 
     private static void registrarse() {
-        String nombre = entrada.leerCadena("📝 Nombre: ");
-        String apellido = entrada.leerCadena("📝 Apellido: ");
-        String usuario = entrada.leerCadena("👤 Usuario: ");
-        String contrasena = entrada.leerCadena("🔐 Contraseña: ");
-        String dni = entrada.leerDNI("\n📋 DNI (formato: XXXXXXXX-X o similar): ");
+        String nombre = entrada.leerCadena("Nombre: ");
+        String apellido = entrada.leerCadena("Apellido: ");
+        String usuario = entrada.leerCadena("Usuario: ");
+        String contrasena = entrada.leerCadena(" Contraseña: ");
+        String dni = entrada.leerDNI("\nDNI (formato: XXXXXXXX-X o similar): ");
 
         // Pedir fecha de nacimiento (formato YYYY-MM-DD)
-        String fechaStr = entrada.leerCadena("📅 Fecha de nacimiento (YYYY-MM-DD): ");
+        String fechaStr = entrada.leerCadena("Fecha de nacimiento (YYYY-MM-DD): ");
         try {
-            Date fecha = Date.valueOf(fechaStr);
-            if (gestorCliente.registrarCliente(nombre, apellido, usuario, contrasena, fecha, dni)) {
-                System.out.println("\n✓ ¡Registro exitoso! Ya puedes iniciar sesión.");
+            if (gestorCliente.registrarCliente(nombre, apellido, usuario, contrasena, fechaStr, dni)) {
+                System.out.println("\n¡Registro exitoso! Ya puedes iniciar sesión.");
             } else {
-                System.out.println("\n✗ Error al registrar.");
+                System.out.println("\nError al registrar.");
             }
         } catch (Exception e) {
-            System.out.println("\n✗ Formato de fecha inválido. Usa YYYY-MM-DD");
+            System.out.println("\nFormato de fecha inválido. Usa YYYY-MM-DD");
         }
     }
 
@@ -98,15 +99,15 @@ public class Launcher {
 
         while (true) {
             System.out.println("\n┌────────────────────────────────────────┐");
-            System.out.println("│  ♫ MENÚ CLIENTE " + (cliente.isEsPremium() ? "(PREMIUM)" : "(FREE)") + "              │");
+            System.out.println("│  MENÚ CLIENTE " + (cliente.isEsPremium() ? "(PREMIUM)" : "(FREE)") + "              │");
             System.out.println("├────────────────────────────────────────┤");
-            System.out.println("│ 1. 🎵 Explorar Música                  │");
-            System.out.println("│ 2. 🎙️  Explorar Podcasts               │");
-            System.out.println("│ 3. ♡ Mis Favoritos                     │");
-            System.out.println("│ 4. 📋 Mis Playlists                    │");
-            System.out.println("│ 5. ⏯️  Reproductor de Audio            │");
-            System.out.println("│ 6. 💎 Actualizar a Premium             │");
-            System.out.println("│ 7. 🚪 Cerrar Sesión                    │");
+            System.out.println("│ 1. Explorar Música                  │");
+            System.out.println("│ 2. Explorar Podcasts               │");
+            System.out.println("│ 3. Mis Favoritos                     │");
+            System.out.println("│ 4. Mis Playlists                    │");
+            System.out.println("│ 5. Reproductor de Audio            │");
+            System.out.println("│ 6. Actualizar a Premium             │");
+            System.out.println("│ 7. Cerrar Sesión                    │");
             System.out.println("└────────────────────────────────────────┘");
 
             int opcion = entrada.esValorMenuValido(1, 7);
@@ -132,7 +133,7 @@ public class Launcher {
                     break;
                 case 7:
                     gestorCliente.logout();
-                    System.out.println("\n✓ Sesión cerrada. Hasta luego!");
+                    System.out.println("\nSesión cerrada. Hasta luego!");
                     return;
             }
         }
@@ -140,16 +141,16 @@ public class Launcher {
 
     private static void explorarMusica() {
         System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│      🎵 EXPLORAR MÚSICA               │");
+        System.out.println("│      EXPLORAR MÚSICA               │");
         System.out.println("└────────────────────────────────────────┘");
 
         ArrayList<String> artistas = gestorCliente.obtenerArtistas();
         if (artistas.isEmpty()) {
-            System.out.println("✗ No hay artistas disponibles");
+            System.out.println("No hay artistas disponibles");
             return;
         }
 
-        System.out.println("\n📍 Artistas disponibles:");
+        System.out.println("\nArtistas disponibles:");
         for (int i = 0; i < artistas.size(); i++) {
             System.out.println((i + 1) + ". " + artistas.get(i));
         }
@@ -158,9 +159,9 @@ public class Launcher {
         String artista = artistas.get(opcion - 1);
 
         ArrayList<Album> albums = gestorCliente.obtenerDiscografia(artista);
-        System.out.println("\n📀 Álbumes de " + artista + ":");
+        System.out.println("\nÁlbumes de " + artista + ":");
         for (int i = 0; i < albums.size(); i++) {
-            System.out.println((i + 1) + ". " + albums.get(i).getTitulo() + " (" + albums.get(i).getAño() + ")");
+            System.out.println((i + 1) + ". " + albums.get(i).getTitulo() + " (" + albums.get(i).getAnno() + ")");
         }
 
         if (!albums.isEmpty()) {
@@ -168,20 +169,20 @@ public class Launcher {
             String albumTitulo = albums.get(opAlbum - 1).getTitulo();
 
             ArrayList<Cancion> canciones = gestorCliente.obtenerCancionesAlbum(albumTitulo);
-            System.out.println("\n🎵 Canciones:");
+            System.out.println("\nCanciones:");
             for (int i = 0; i < canciones.size(); i++) {
-                System.out.println((i + 1) + ". " + canciones.get(i).getNombre());
+                System.out.println((i + 1) + ". " + canciones.get(i).getNombreAudio());
             }
         }
     }
 
     private static void explorarPodcasts() {
         System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│      🎙️  EXPLORAR PODCASTS            │");
+        System.out.println("│      EXPLORAR PODCASTS            │");
         System.out.println("└────────────────────────────────────────┘");
 
         var podcasters = gestorCliente.obtenerPodcasters().stream()
-                .map(p -> p.getNombre())
+            .map(p -> p.getNombreArt())
                 .collect(Collectors.toList());
 
         if (podcasters.isEmpty()) {
@@ -189,7 +190,7 @@ public class Launcher {
             return;
         }
 
-        System.out.println("\n🎙️  Podcasters disponibles:");
+        System.out.println("\nPodcasters disponibles:");
         for (int i = 0; i < podcasters.size(); i++) {
             System.out.println((i + 1) + ". " + podcasters.get(i));
         }
@@ -197,30 +198,30 @@ public class Launcher {
 
     private static void verFavoritos() {
         System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│      ♡ MIS FAVORITOS                 │");
+        System.out.println("│      MIS FAVORITOS                 │");
         System.out.println("└────────────────────────────────────────┘");
 
         ArrayList<Audio> favoritos = gestorCliente.obtenerFavoritosCliente();
         if (favoritos.isEmpty()) {
-            System.out.println("✗ No tienes favoritos aún");
+            System.out.println("No tienes favoritos aún");
             return;
         }
 
-        System.out.println("\n♡ Tus favoritos (" + favoritos.size() + "):");
+        System.out.println("\nTus favoritos (" + favoritos.size() + "):");
         for (int i = 0; i < favoritos.size(); i++) {
-            System.out.println((i + 1) + ". " + favoritos.get(i).getNombre());
+            System.out.println((i + 1) + ". " + favoritos.get(i).getNombreAudio());
         }
     }
 
     private static void gestionarPlaylists() {
         System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│      📋 MIS PLAYLISTS                │");
+        System.out.println("│       MIS PLAYLISTS                │");
         System.out.println("└────────────────────────────────────────┘");
 
         ArrayList<Playlist> playlists = gestorCliente.obtenerPlaylistsCliente();
-        System.out.println("\n📋 Tus playlists (" + playlists.size() + "):");
+        System.out.println("\nTus playlists (" + playlists.size() + "):");
         for (Playlist p : playlists) {
-            System.out.println(" - " + p.getNombre());
+            System.out.println(" - " + p.getTitulo());
         }
 
         System.out.println("\n1. Crear nueva playlist");
@@ -228,36 +229,36 @@ public class Launcher {
         int opcion = entrada.esValorMenuValido(1, 2);
 
         if (opcion == 1) {
-            String nombre = entrada.leerCadena("📝 Nombre de la playlist: ");
+            String nombre = entrada.leerCadena("Nombre de la playlist: ");
             if (gestorCliente.crearPlaylist(nombre)) {
-                System.out.println("\n✓ Playlist creada exitosamente");
+                System.out.println("\nPlaylist creada exitosamente");
             } else {
-                System.out.println("\n✗ No se pudo crear la playlist");
+                System.out.println("\nNo se pudo crear la playlist");
             }
         }
     }
 
     private static void iniciarReproductor() {
-        System.out.println("\n⏯️  Reproductor iniciado (función en desarrollo)");
+        System.out.println("\nReproductor iniciado (función en desarrollo)");
     }
 
     private static void actualizarPremium() {
         Cliente cliente = gestorCliente.getClienteActual();
         if (cliente.isEsPremium()) {
-            System.out.println("\n✓ Ya eres usuario Premium");
+            System.out.println("\nYa eres usuario Premium");
             return;
         }
 
         String confirmacion = entrada.leerSiNo("¿Deseas actualizarte a Premium?");
         if (confirmacion.equalsIgnoreCase("si")) {
             if (gestorCliente.actualizarAPremium()) {
-                System.out.println("\n✓ ¡Bienvenido a Premium!");
+                System.out.println("\n¡Bienvenido a Premium!");
                 System.out.println("Ahora disfrutas de:");
                 System.out.println(" - Playlists ilimitadas");
                 System.out.println(" - Sin restricción de 10 minutos");
                 System.out.println(" - Reproducción ordenada o aleatoria");
             } else {
-                System.out.println("\n✗ Error al actualizar Premium");
+                System.out.println("\nError al actualizar Premium");
             }
         }
     }

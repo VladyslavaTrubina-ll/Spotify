@@ -6,6 +6,11 @@ import java.util.*;
 public class GestorCliente {
 	private ControladorDB controladordb;
 	private Cliente clienteActual;
+	private static final String NOMBRE_BD_DEFECTO = "spoti";
+
+	public GestorCliente() {
+		this(NOMBRE_BD_DEFECTO);
+	}
 
 	public GestorCliente(String nombreBD) {
 		this.controladordb = new ControladorDB(nombreBD);
