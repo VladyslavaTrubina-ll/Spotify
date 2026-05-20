@@ -153,8 +153,8 @@ INSERT INTO audio (nombre, duracion, archivo, tipo) VALUES
 
 -- 4. ALBUM (Añadimos álbum del grupo)
 INSERT INTO album (titulo, ano, genero, idMusico) VALUES 
-('Culturally Appropriate', '2022-11-25', 'Electronic', 1),
-('Evolve', '2017-06-23', 'Rock', 6); -- Álbum del grupo Imagine Dragons (ID 6)
+('Culturally Appropriate', 2022, 'Electronic', 1),
+('Evolve', 2017, 'Rock', 6); -- Álbum del grupo Imagine Dragons (ID 6)
 
 -- 5. CANCION y PODCAST (Relacionamos los audios con sus tablas hijas)
 INSERT INTO cancion (idCancion, idAlbum, artistasInvitados) VALUES 
@@ -217,3 +217,168 @@ FROM playlist pl
 LEFT JOIN playlist_canciones pc ON pl.idPlaylist = pc.idPlaylist
 GROUP BY pl.idPlaylist, pl.titulo
 ORDER BY totalCanciones DESC;
+
+-- ==================================================================
+-- ÍNDICES (uso recomendado: 3 índices para mejorar consultas frecuentes)
+-- ==================================================================
+CREATE INDEX idx_audio_nombre ON audio(nombre);
+CREATE INDEX idx_artista_nombre ON artista(nombreArtistico);
+CREATE INDEX idx_playlist_titulo ON playlist(titulo);
+
+-- ==================================================================
+-- VISTAS ADICIONALES (Resumen final)
+-- ==================================================================
+DROP VIEW IF EXISTS clientes_playlists_count;
+CREATE VIEW clientes_playlists_count AS
+SELECT c.idCliente, c.nombre, c.apellidos, COUNT(p.idPlaylist) AS numPlaylists
+FROM cliente c
+LEFT JOIN playlist p ON c.idCliente = p.idCliente
+GROUP BY c.idCliente, c.nombre, c.apellidos;
+
+-- ==================================================================
+-- ROLES, USUARIOS Y PERMISOS
+-- ==================================================================
+-- Roles
+DROP ROLE IF EXISTS role_read, role_write, role_admin;
+CREATE ROLE role_read, role_write, role_admin;
+
+-- Usuarios (ejemplo locales)
+CREATE USER IF NOT EXISTS 'reader1'@'localhost' IDENTIFIED BY 'readerpass1';
+CREATE USER IF NOT EXISTS 'reader2'@'localhost' IDENTIFIED BY 'readerpass2';
+CREATE USER IF NOT EXISTS 'writer1'@'localhost' IDENTIFIED BY 'writerpass1';
+CREATE USER IF NOT EXISTS 'writer2'@'localhost' IDENTIFIED BY 'writerpass2';
+CREATE USER IF NOT EXISTS 'admin1'@'localhost' IDENTIFIED BY 'adminpass1';
+
+-- Conceder privilegios a roles
+GRANT SELECT ON spoty.* TO role_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON spoty.* TO role_write;
+GRANT ALL PRIVILEGES ON spoty.* TO role_admin;
+
+-- Asignar roles a usuarios
+GRANT role_read TO 'reader1'@'localhost', 'reader2'@'localhost';
+GRANT role_write TO 'writer1'@'localhost', 'writer2'@'localhost';
+GRANT role_admin TO 'admin1'@'localhost';
+
+-- Hacer rol por defecto
+SET DEFAULT ROLE role_read TO 'reader1'@'localhost';
+SET DEFAULT ROLE role_write TO 'writer1'@'localhost';
+SET DEFAULT ROLE role_admin TO 'admin1'@'localhost';
+
+-- ==================================================================
+-- PROCEDIMIENTOS Y FUNCIONES (3 ejemplos: crear_artista, actualizar_album, contar_playlists_cliente)
+-- ==================================================================
+DELIMITER $$
+DROP PROCEDURE IF EXISTS crear_artista$$
+CREATE PROCEDURE crear_artista(
+    IN p_nombre VARCHAR(100),
+    IN p_genero VARCHAR(50),
+    IN p_descripcion VARCHAR(200),
+    IN p_imagen VARCHAR(255)
+)
+BEGIN
+    DECLARE v_count INT DEFAULT 0;
+    SELECT COUNT(*) INTO v_count FROM artista WHERE nombreArtistico = p_nombre;
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Artista ya existe';
+    ELSE
+        INSERT INTO artista (nombreArtistico, genero, descripcion, imagen) VALUES (p_nombre, p_genero, p_descripcion, p_imagen);
+    END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS actualizar_album$$
+CREATE PROCEDURE actualizar_album(
+    IN p_id INT,
+    IN p_titulo VARCHAR(100),
+    IN p_ano YEAR,
+    IN p_genero VARCHAR(50),
+    IN p_imagen VARCHAR(255),
+    IN p_idMusico INT
+)
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM album WHERE idAlbum = p_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Album no existe';
+    ELSE
+        UPDATE album SET titulo = p_titulo, ano = p_ano, genero = p_genero, imagen = p_imagen, idMusico = p_idMusico WHERE idAlbum = p_id;
+    END IF;
+END$$
+
+DROP FUNCTION IF EXISTS contar_playlists_cliente$$
+CREATE FUNCTION contar_playlists_cliente(p_idCliente INT) RETURNS INT DETERMINISTIC
+BEGIN
+    DECLARE v_count INT DEFAULT 0;
+    SELECT COUNT(*) INTO v_count FROM playlist WHERE idCliente = p_idCliente;
+    RETURN v_count;
+END$$
+DELIMITER ;
+
+-- ==================================================================
+-- EVENTO: limpieza mensual de playlists vacías (creadas hace más de 1 año)
+-- ==================================================================
+-- Nota: activar el event_scheduler global si está disponible: SET GLOBAL event_scheduler = ON;
+DROP EVENT IF EXISTS evento_limpiar_playlists_vacias;
+CREATE EVENT evento_limpiar_playlists_vacias
+ON SCHEDULE EVERY 1 MONTH
+DO
+  DELETE FROM playlist WHERE idPlaylist IN (
+    SELECT p.idPlaylist FROM (
+      SELECT pl.idPlaylist FROM playlist pl LEFT JOIN playlist_canciones pc ON pl.idPlaylist = pc.idPlaylist WHERE pc.idPlaylist IS NULL AND pl.fechaCreacion < DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+    ) AS p
+  );
+
+-- ==================================================================
+-- CONSULTAS / PLANTILLAS SQL para acceso y mantenimiento desde Java
+-- ==================================================================
+-- Insertar artista (PreparedStatement):
+-- INSERT INTO artista (nombreArtistico, genero, descripcion, imagen) VALUES (?, ?, ?, ?);
+
+-- Actualizar álbum (PreparedStatement):
+-- UPDATE album SET titulo = ?, ano = ?, genero = ?, imagen = ?, idMusico = ? WHERE idAlbum = ?;
+
+-- Eliminar canción (PreparedStatement):
+-- DELETE FROM cancion WHERE idCancion = ?;
+
+-- Crear podcast y podcaster (ejemplo):
+-- INSERT INTO artista (nombreArtistico, genero, descripcion) VALUES (?, 'Podcast', ?);
+-- SET @idArt = LAST_INSERT_ID();
+-- INSERT INTO podcaster (idPodcaster) VALUES (@idArt);
+-- INSERT INTO audio (nombre, duracion, archivo, tipo) VALUES (?, ?, ?, 'Podcast');
+-- INSERT INTO podcast (idPodcast, colaboradores, idPodcaster) VALUES (LAST_INSERT_ID(), ?, @idArt);
+
+-- Consultas útiles (SELECT) con JOINs:
+-- Obtener canciones de un álbum:
+-- SELECT a.idAudio, a.nombre, a.duracion FROM audio a JOIN cancion c ON a.idAudio = c.idCancion WHERE c.idAlbum = ?;
+
+-- Uso de la función creada desde SQL (puede llamarse desde JDBC con SELECT contar_playlists_cliente(?)):
+-- SELECT contar_playlists_cliente(?);
+
+-- ==================================================================
+-- DATOS ADICIONALES DE EJEMPLO (llenar tablas que falten o añadir más filas)
+-- ==================================================================
+INSERT INTO idioma (descripcion) VALUES ('Portugués');
+
+INSERT INTO artista (nombreArtistico, genero, descripcion, imagen) VALUES
+('The Testers', 'Indie', 'Banda de prueba', NULL),
+('Coding Beats', 'Electronic', 'Proyecto de desarrolladores', NULL);
+
+INSERT INTO musico (idMusico, caracteristica) VALUES
+((SELECT idArtista FROM artista WHERE nombreArtistico = 'The Testers'), 'Grupo'),
+((SELECT idArtista FROM artista WHERE nombreArtistico = 'Coding Beats'), 'Solista');
+
+-- Añadir audios de ejemplo
+INSERT INTO audio (nombre, duracion, archivo, tipo) VALUES
+('Test Song', '00:02:30', 'test_song.mp3', 'Cancion'),
+('Dev Podcast #1', '00:45:00', 'devpod1.mp3', 'Podcast');
+
+-- Relacionar cancion y podcast con sus tablas hijas
+INSERT INTO cancion (idCancion, idAlbum, artistasInvitados) VALUES
+((SELECT idAudio FROM audio WHERE nombre = 'Test Song'), NULL, NULL);
+INSERT INTO podcast (idPodcast, colaboradores, idPodcaster) VALUES
+((SELECT idAudio FROM audio WHERE nombre = 'Dev Podcast #1'), 'Equipo', (SELECT idPodcaster FROM podcaster LIMIT 1));
+
+-- ==================================================================
+-- INDICACIONES FINALES
+-- - Ejecuta este script en un servidor MySQL/MariaDB con privilegios de administrador
+-- - Para crear roles y usuarios necesitas privilegios de administración (CREATE USER, GRANT)
+-- - Hice uso de SIGNAL/IF/variables en procedimientos para validar condiciones
+-- - El EVENT usa una subconsulta con tabla derivada para evitar errores "You can't specify target table for update in FROM clause"
+-- ==================================================================
