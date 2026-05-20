@@ -1,25 +1,24 @@
 package vista;
 
-import controlador.ControladorDB;
-import controlador.ControladorEntradaYSalida;
-import controlador.GestorCliente;
 import java.util.ArrayList;
-import modelo.Album;
-import modelo.Cancion;
-
-import modelo.Audio;
-import modelo.Cliente;
-import modelo.Playlist;
 import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.io.IOException;
+import modelo.*;
 import controlador.*;
+
 public class Launcher {
 
-	private static final String NOMBRE_BD = "spoti";
+    private static final String NOMBRE_BD = "spoty";
 
 
         private static GestorCliente gestorCliente;
         private static ReproductorAudio reproductor;
         private static ControladorEntradaYSalida entrada;
+        private static ArrayList<Audio> audiosReproductor;
 
         public static void main(String[] args) {
             entrada = new ControladorEntradaYSalida();
@@ -30,7 +29,7 @@ public class Launcher {
         }
     private static void mostrarPantallaBienvenida() {
         System.out.println("\n╔════════════════════════════════════════╗");
-        System.out.println("║      BIENVENIDO A SPOTIFY           ║");
+        System.out.println("║      BIENVENIDO A SPOTIFY           	  ║");
         System.out.println("╚════════════════════════════════════════╝\n");
     }
 
@@ -78,12 +77,19 @@ public class Launcher {
         String apellido = entrada.leerCadena("Apellido: ");
         String usuario = entrada.leerCadena("Usuario: ");
         String contrasena = entrada.leerCadena(" Contraseña: ");
-        String dni = entrada.leerDNI("\nDNI (formato: XXXXXXXX-X o similar): ");
+        System.out.println("\nIdiomas disponibles: 1. Español  2. English  3. Ruso  4. Portugués");
+        int opcionIdioma = entrada.esValorMenuValido(1, 4);
+        String idioma = switch (opcionIdioma) {
+            case 1 -> "Español";
+            case 2 -> "English";
+            case 3 -> "Ruso";
+            default -> "Portugués";
+        };
 
         // Pedir fecha de nacimiento (formato YYYY-MM-DD)
         String fechaStr = entrada.leerCadena("Fecha de nacimiento (YYYY-MM-DD): ");
         try {
-            if (gestorCliente.registrarCliente(nombre, apellido, usuario, contrasena, fechaStr, dni)) {
+            if (gestorCliente.registrarCliente(nombre, apellido, usuario, contrasena, fechaStr, idioma)) {
                 System.out.println("\n¡Registro exitoso! Ya puedes iniciar sesión.");
             } else {
                 System.out.println("\nError al registrar.");
@@ -97,6 +103,7 @@ public class Launcher {
         Cliente cliente = gestorCliente.getClienteActual();
         if (cliente == null) return;
 
+        
         while (true) {
             System.out.println("\n┌────────────────────────────────────────┐");
             System.out.println("│  MENÚ CLIENTE " + (cliente.isEsPremium() ? "(PREMIUM)" : "(FREE)") + "              │");
@@ -140,39 +147,63 @@ public class Launcher {
     }
 
     private static void explorarMusica() {
-        System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│      EXPLORAR MÚSICA               │");
-        System.out.println("└────────────────────────────────────────┘");
+        while (true) {
+            System.out.println("\n┌────────────────────────────────────────┐");
+            System.out.println("│      EXPLORAR MÚSICA                   │");
+            System.out.println("└────────────────────────────────────────┘");
 
-        ArrayList<String> artistas = gestorCliente.obtenerArtistas();
-        if (artistas.isEmpty()) {
-            System.out.println("No hay artistas disponibles");
-            return;
-        }
-
-        System.out.println("\nArtistas disponibles:");
-        for (int i = 0; i < artistas.size(); i++) {
-            System.out.println((i + 1) + ". " + artistas.get(i));
-        }
-
-        int opcion = entrada.esValorMenuValido(1, artistas.size());
-        String artista = artistas.get(opcion - 1);
-
-        ArrayList<Album> albums = gestorCliente.obtenerDiscografia(artista);
-        System.out.println("\nÁlbumes de " + artista + ":");
-        for (int i = 0; i < albums.size(); i++) {
-            System.out.println((i + 1) + ". " + albums.get(i).getTitulo() + " (" + albums.get(i).getAnno() + ")");
-        }
-
-        if (!albums.isEmpty()) {
-            int opAlbum = entrada.esValorMenuValido(1, albums.size());
-            String albumTitulo = albums.get(opAlbum - 1).getTitulo();
-
-            ArrayList<Cancion> canciones = gestorCliente.obtenerCancionesAlbum(albumTitulo);
-            System.out.println("\nCanciones:");
-            for (int i = 0; i < canciones.size(); i++) {
-                System.out.println((i + 1) + ". " + canciones.get(i).getNombreAudio());
+            ArrayList<String> artistas = gestorCliente.obtenerArtistas();
+            if (artistas.isEmpty()) {
+                System.out.println("No hay artistas disponibles");
+                entrada.leerCadena("Presiona Enter para volver...");
+                return;
             }
+
+            
+            System.out.println("\n Artistas disponibles:");
+            for (int i = 0; i < artistas.size(); i++) {
+                System.out.printf(" %2d) %s\n", (i + 1), artistas.get(i));
+            }
+            System.out.println("\n  0. Volver");
+            int opcion = entrada.esValorMenuValido(0, artistas.size());
+            if (opcion == 0) {
+                return;
+            }
+            
+            String artista = artistas.get(opcion - 1);
+            ArrayList<Album> albums = gestorCliente.obtenerDiscografia(artista);
+
+            if (albums.isEmpty()) {
+                System.out.println("\nEl artista '" + artista + "' no tiene álbumes cargados.");
+                entrada.leerCadena("Presiona Enter para elegir otro artista...");
+                continue;
+            }
+
+            System.out.println("\nÁlbumes de " + artista + ":");
+            for (int i = 0; i < albums.size(); i++) {
+                System.out.printf(" %2d) %s (%s)\n", (i + 1), albums.get(i).getTitulo(), albums.get(i).getAnno());
+            }
+
+            int opAlbum = entrada.esValorMenuValido(0, albums.size());
+            if (opAlbum == 0) {
+                continue;
+            }
+
+            String albumTitulo = albums.get(opAlbum - 1).getTitulo();
+            ArrayList<Cancion> canciones = gestorCliente.obtenerCancionesAlbum(albumTitulo);
+
+            if (canciones.isEmpty()) {
+                System.out.println("\nNo hay canciones en este álbum.");
+                entrada.leerCadena("Enter para volver...");
+                continue;
+            }
+
+            System.out.println("\nCanciones en '" + albumTitulo + "':");
+            for (int i = 0; i < canciones.size(); i++) {
+                System.out.printf(" %2d) %s\n", (i + 1), canciones.get(i).getNombreAudio());
+            }
+
+            entrada.leerCadena("Presiona Enter para volver al menú de música...");
         }
     }
 
@@ -186,7 +217,7 @@ public class Launcher {
                 .collect(Collectors.toList());
 
         if (podcasters.isEmpty()) {
-            System.out.println("✗ No hay podcasters disponibles");
+            System.out.println("No hay podcasters disponibles");
             return;
         }
 
@@ -239,7 +270,100 @@ public class Launcher {
     }
 
     private static void iniciarReproductor() {
-        System.out.println("\nReproductor iniciado (función en desarrollo)");
+        Cliente cliente = gestorCliente.getClienteActual();
+        if (cliente == null) {
+            System.out.println("\nDebes iniciar sesión primero.");
+            return;
+        }
+
+        audiosReproductor = crearAudiosDemo();
+        if (audiosReproductor.isEmpty()) {
+            System.out.println("\nNo hay canciones disponibles.");
+            return;
+        }
+
+        reproductor = new ReproductorAudio(cliente.getId(), cliente.isEsPremium(), new controlador.ControladorDB(NOMBRE_BD), gestorCliente);
+        reproductor.establecerColaReproduccion(audiosReproductor);
+
+        while (true) {
+            System.out.println("\n┌────────────────────────────────────────┐");
+            System.out.println("│      REPRODUCTOR DE AUDIO              │");
+            System.out.println("└────────────────────────────────────────┘");
+            System.out.println("\nCanciones disponibles:");
+            for (int i = 0; i < audiosReproductor.size(); i++) {
+                Audio audio = audiosReproductor.get(i);
+                System.out.println((i + 1) + ". " + audio.getNombreAudio() + " [" + audio.durataConvertida() + "] - " + audio.getArchivo());
+            }
+
+            System.out.println("\n1. Reproducir canción");
+            System.out.println("2. Pausar");
+            System.out.println("3. Siguiente");
+            System.out.println("4. Anterior");
+            System.out.println("5. Cambiar velocidad");
+            System.out.println("6. Volver al menú");
+            System.out.println("7. Descargar canción (guardar WAV en downloads/)");
+
+            int opcion = entrada.esValorMenuValido(1, 7);
+
+            if (opcion == 6) {
+                reproductor.detener();
+                return;
+            }
+
+            if (opcion == 1) {
+                System.out.println("\nElige una canción para reproducir:");
+                int seleccion = entrada.esValorMenuValido(1, audiosReproductor.size());
+                reproductor.saltarA(seleccion - 1);
+                reproductor.play();
+                System.out.println(reproductor.obtenerInformacionActual());
+            } else if (opcion == 2) {
+                reproductor.pause();
+                System.out.println("Pausado.");
+            } else if (opcion == 3) {
+                Audio audio = reproductor.siguiente();
+                if (audio != null) {
+                    reproductor.play();
+                    System.out.println("Ahora suena: " + audio.getNombreAudio());
+                }
+            } else if (opcion == 4) {
+                Audio audio = reproductor.anterior();
+                if (audio != null) {
+                    reproductor.play();
+                    System.out.println("Ahora suena: " + audio.getNombreAudio());
+                }
+            } else if (opcion == 5) {
+                System.out.println("\nVelocidades: 1. 0.5x  2. 1x  3. 1.5x  4. 2x");
+                int vel = entrada.esValorMenuValido(1, 4);
+                double velocidad = switch (vel) {
+                    case 1 -> 0.5;
+                    case 2 -> 1.0;
+                    case 3 -> 1.5;
+                    default -> 2.0;
+                };
+                reproductor.establecerVelocidad(velocidad);
+            } else if (opcion == 7) {
+                System.out.println("\nElige una canción para descargar:");
+                int seleccion = entrada.esValorMenuValido(1, audiosReproductor.size());
+                Audio audio = audiosReproductor.get(seleccion - 1);
+                Path src = Paths.get(audio.getArchivo());
+                Path downloads = Paths.get("downloads");
+                try {
+                    if (!Files.exists(downloads)) Files.createDirectories(downloads);
+                    Path dest = downloads.resolve(src.getFileName());
+                    Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+                    System.out.println("Canción guardada en: " + dest.toString());
+                } catch (IOException e) {
+                    System.out.println("Error guardando canción: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private static ArrayList<Audio> crearAudiosDemo() {
+        ArrayList<Audio> audios = new ArrayList<>();
+        audios.add(new Cancion(1, "Cancion 1", "canciones/cancion1.wav", 12, 0, 0, null, "Cancion", "imagenes/imagen1.png"));
+        audios.add(new Cancion(2, "Cancion 2", "canciones/cancion2.wav", 12, 0, 0, null, "Cancion", "imagenes/imagen2.gif"));
+        return audios;
     }
 
     private static void actualizarPremium() {
