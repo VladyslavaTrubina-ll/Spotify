@@ -230,6 +230,13 @@ public class ControladorDB {
 		return this.conect;
 	}
 
+	/**
+	 * Establece el id del cliente actual (útil cuando la autenticación se realiza fuera de sqlLogin)
+	 */
+	public void setIdClienteActual(int id) {
+		this.idClienteActual = id;
+	}
+
 	private Integer resolverIdioma(String idioma) {
 			if (idioma == null || idioma.trim().isEmpty()) {
 				return null;
@@ -239,7 +246,7 @@ public class ControladorDB {
 			try {
 				return Integer.parseInt(limpio);
 			} catch (NumberFormatException e) {
-				String sql = "SELECT idIdioma FROM idioma WHERE description = ?";
+				String sql = "SELECT idIdioma FROM idioma WHERE descripcion = ?";
 				try (PreparedStatement ps = conect.prepareStatement(sql)) {
 					ps.setString(1, limpio);
 					try (ResultSet rs = ps.executeQuery()) {
@@ -265,7 +272,7 @@ public class ControladorDB {
 		// Métodos adicionales basados en el ejemplo (consultas e inserciones)
 		public ArrayList<Cliente> obtenerClientes() {
 			ArrayList<Cliente> clientes = new ArrayList<Cliente>();
-			String query = "SELECT c.idCliente, c.nombre, c.apellidos, i.description, c.usuario, c.contrasena, c.fechaNacimiento, c.fechaRegistro, c.tipo "
+			String query = "SELECT c.idCliente, c.nombre, c.apellidos, i.descripcion, c.usuario, c.contrasena, c.fechaNacimiento, c.fechaRegistro, c.tipo "
 					+ "FROM cliente c LEFT JOIN idioma i ON c.idIdioma = i.idIdioma";
 			try (Statement consulta = conect.createStatement(); ResultSet resultado = consulta.executeQuery(query)) {
 				while (resultado.next()) {
@@ -367,9 +374,20 @@ public class ControladorDB {
 					String tipo = "podcast";
 					Time tiempo = resultado.getTime("duracion");
 					int duracionSegundos = tiempo.toLocalTime().toSecondOfDay();
+					// colaboradores puede venir como texto o número; intentar parsear a int
+					int numeroParticipantes = 0;
+					try {
+						String col = resultado.getString("colaboradores");
+						if (col != null) {
+							numeroParticipantes = Integer.parseInt(col);
+						}
+					} catch (Exception ex) {
+						// no es un número; mantener 0
+						numeroParticipantes = 0;
+					}
 					Podcast nuevoPodcast = new Podcast(resultado.getInt("idAudio"), resultado.getString("nombre"),
 							resultado.getString("archivo"), duracionSegundos, resultado.getInt("nReproducciones"),
-							resultado.getInt("idPodcaster"), resultado.getInt("colaboradores"), tipo);
+							resultado.getInt("idPodcaster"), numeroParticipantes, tipo);
 					podcasts.add(nuevoPodcast);
 				}
 				}
@@ -1012,6 +1030,29 @@ public class ControladorDB {
 				System.out.println("Error obteniendo favoritos: " + e.getMessage());
 			}
 			return favoritos;
+		}
+
+		/**
+		 * Obtiene todos los audios de la base de datos.
+		 */
+		public ArrayList<Audio> obtenerAudios() {
+			ArrayList<Audio> audios = new ArrayList<>();
+			if (!hayConexionActiva()) {
+				return audios;
+			}
+
+			String sql = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, a.tipo FROM audio a ORDER BY a.nombre";
+			try (PreparedStatement ps = conect.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					Audio audio = crearAudioDesdeResultSet(rs);
+					if (audio != null) {
+						audios.add(audio);
+					}
+				}
+			} catch (SQLException e) {
+				System.out.println("Error obteniendo audios: " + e.getMessage());
+			}
+			return audios;
 		}
 
 		/**

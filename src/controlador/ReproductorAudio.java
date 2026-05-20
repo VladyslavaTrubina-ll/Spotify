@@ -25,6 +25,7 @@ public class ReproductorAudio {
 	private Timer timerProgreso;
 	private ControladorDB controladordb;
 	private GestorCliente gestorCliente;
+	private SimpleAudioPlayer player;
 	
 	// Constantes
 	private static final long TIEMPO_MINIMO_SALTO_FREE = 10 * 60 * 1000; // 10 minutos en ms
@@ -44,6 +45,7 @@ public class ReproductorAudio {
 		this.timerProgreso = null;
 		this.controladordb = controladordb;
 		this.gestorCliente = gestorCliente;
+		this.player = new SimpleAudioPlayer();
 		
 		// Crear directorio de exportación si no existe
 		crearDirectorioExportacion();
@@ -123,6 +125,15 @@ public class ReproductorAudio {
 			controladordb.cerrarConexion();
 		}
 
+		// Intentar reproducir audio real si existe el archivo
+		String ruta = audioActual.getArchivo();
+		boolean cargado = player.load(ruta);
+		if (cargado) {
+			player.play();
+		} else {
+			System.out.println("(Simulado) ▶ Reproduciendo: " + audioActual.getNombreAudio());
+		}
+
 		enReproduccion = true;
 		iniciarSimuladorProgreso();
 		System.out.println("▶ Reproduciendo: " + audioActual.getNombreAudio());
@@ -143,6 +154,12 @@ public class ReproductorAudio {
 			timerProgreso.cancel();
 			timerProgreso = null;
 		}
+		// Pausar reproducción real si está corriendo
+		try {
+			player.pause();
+		} catch (Exception e) {
+			// ignore
+		}
 		System.out.println("⏸ Pausa");
 		return true;
 	}
@@ -157,6 +174,11 @@ public class ReproductorAudio {
 
 		enReproduccion = true;
 		iniciarSimuladorProgreso();
+		try {
+			player.resume();
+		} catch (Exception e) {
+			// ignore
+		}
 		System.out.println("▶ Reanudando: " + obtenerAudioActual().getNombreAudio());
 		return true;
 	}
@@ -171,6 +193,12 @@ public class ReproductorAudio {
 			timerProgreso = null;
 		}
 		segundoActual = 0;
+		try {
+			player.stop();
+			player.close();
+		} catch (Exception e) {
+			// ignore
+		}
 		System.out.println("⏹ Reproducción detenida");
 	}
 

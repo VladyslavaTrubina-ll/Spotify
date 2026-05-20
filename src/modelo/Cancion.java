@@ -5,11 +5,21 @@ import java.util.*;
 public class Cancion extends Audio {
 	private int idAlbum;
 	private String nombresColaboradores;
+	private String foto;
 
 	public Cancion(int id, String nombreAudio, String archivo, int duratasecondi, int NumRep, int idAlbum, String nombresColaboradores, String tipo) {
 		super(id, nombreAudio, archivo, NumRep, duratasecondi, tipo);
 		this.idAlbum = idAlbum;
 		this.nombresColaboradores = nombresColaboradores;
+		this.foto = null;
+	}
+
+	public Cancion(int id, String nombreAudio, String archivo, int duratasecondi, int NumRep, int idAlbum,
+			String nombresColaboradores, String tipo, String foto) {
+		super(id, nombreAudio, archivo, NumRep, duratasecondi, tipo);
+		this.idAlbum = idAlbum;
+		this.nombresColaboradores = nombresColaboradores;
+		this.foto = foto;
 	}
 
 	public int getIdAlbum() {
@@ -28,8 +38,16 @@ public class Cancion extends Audio {
 		this.nombresColaboradores = nombresColaboradores;
 	}
 
+	public String getFoto() {
+		return foto;
+	}
+
+	public void setFoto(String foto) {
+		this.foto = foto;
+	}
+
 	@Override
 	public String toString() {
-		return "Cancion[" + super.toString() + ", colaboradores=" + nombresColaboradores + "]";
+		return "Cancion[" + super.toString() + ", colaboradores=" + nombresColaboradores + ", foto=" + foto + "]";
 	}
 }

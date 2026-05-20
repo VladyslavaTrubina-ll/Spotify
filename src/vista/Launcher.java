@@ -175,8 +175,16 @@ public class Launcher {
 
             if (albums.isEmpty()) {
                 System.out.println("\nEl artista '" + artista + "' no tiene álbumes cargados.");
-                entrada.leerCadena("Presiona Enter para elegir otro artista...");
-                continue;
+                System.out.println("\n1. Elegir otro artista");
+                System.out.println("2. Volver al menú cliente");
+                int op = entrada.esValorMenuValido(1, 2);
+                if (op == 1) {
+                    // Volver a la lista de artistas
+                    continue;
+                } else {
+                    // Regresar al menú del cliente
+                    return;
+                }
             }
 
             System.out.println("\nÁlbumes de " + artista + ":");
@@ -221,11 +229,71 @@ public class Launcher {
             return;
         }
 
-        System.out.println("\nPodcasters disponibles:");
-        for (int i = 0; i < podcasters.size(); i++) {
-            System.out.println((i + 1) + ". " + podcasters.get(i));
+            System.out.println("\nPodcasters disponibles:");
+            for (int i = 0; i < podcasters.size(); i++) {
+                System.out.println((i + 1) + ". " + podcasters.get(i));
+            }
+
+            System.out.println("\n0. Volver");
+            int opcion = entrada.esValorMenuValido(0, podcasters.size());
+            if (opcion == 0) return;
+
+            String elegido = podcasters.get(opcion - 1);
+            ArrayList<Podcast> podcasts = gestorCliente.obtenerPodcasts(elegido);
+
+            if (podcasts.isEmpty()) {
+                System.out.println("\nEl podcaster '" + elegido + "' no tiene podcasts cargados.");
+                System.out.println("1. Elegir otro podcaster");
+                System.out.println("2. Volver al menú cliente");
+                int op = entrada.esValorMenuValido(1, 2);
+                if (op == 1) 
+                	return ;
+                else return;
+            }
+
+            // Listar episodios
+            System.out.println("\nPodcasts de " + elegido + ":");
+            for (int i = 0; i < podcasts.size(); i++) {
+                Podcast pd = podcasts.get(i);
+                System.out.println((i + 1) + ". " + pd.getNombreAudio() + " [" + pd.durataConvertida() + "] - " + pd.getArchivo());
+            }
+
+            System.out.println("\n1. Reproducir episodio");
+            System.out.println("2. Descargar episodio");
+            System.out.println("3. Volver a podcasters");
+            int accion = entrada.esValorMenuValido(1, 3);
+            if (accion == 3) return;
+
+            if (accion == 1) {
+                System.out.println("\nElige un episodio para reproducir:");
+                int sel = entrada.esValorMenuValido(1, podcasts.size());
+                // Preparar reproductor si es necesario
+                Cliente cliente = gestorCliente.getClienteActual();
+                if (reproductor == null && cliente != null) {
+                    reproductor = new ReproductorAudio(cliente.getId(), cliente.isEsPremium(), new controlador.ControladorDB(NOMBRE_BD), gestorCliente);
+                }
+                ArrayList<Audio> cola = new ArrayList<>();
+                cola.addAll(podcasts);
+                reproductor.establecerColaReproduccion(cola);
+                reproductor.saltarA(sel - 1);
+                reproductor.play();
+                System.out.println(reproductor.obtenerInformacionActual());
+            } else if (accion == 2) {
+                System.out.println("\nElige un episodio para descargar:");
+                int sel = entrada.esValorMenuValido(1, podcasts.size());
+                Podcast pd = podcasts.get(sel - 1);
+                Path src = Paths.get(pd.getArchivo());
+                Path downloads = Paths.get("downloads");
+                try {
+                    if (!Files.exists(downloads)) Files.createDirectories(downloads);
+                    Path dest = downloads.resolve(src.getFileName());
+                    Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+                    System.out.println("Episodio guardado en: " + dest.toString());
+                } catch (IOException e) {
+                    System.out.println("Error guardando episodio: " + e.getMessage());
+                }
+            }
         }
-    }
 
     private static void verFavoritos() {
         System.out.println("\n┌────────────────────────────────────────┐");

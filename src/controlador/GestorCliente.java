@@ -6,7 +6,7 @@ import java.util.*;
 public class GestorCliente {
 	private ControladorDB controladordb;
 	private Cliente clienteActual;
-	private static final String NOMBRE_BD_DEFECTO = "spoti";
+	private static final String NOMBRE_BD_DEFECTO = "spoty";
 
 	public GestorCliente() {
 		this(NOMBRE_BD_DEFECTO);
@@ -30,6 +30,8 @@ public class GestorCliente {
 				if (c.getUsuario().equals(usuario) && c.getContrasena().equals(contrasena)) {
 					c.setPlaylistCliente(controladordb.obtenerPlaylists(c.getId()));
 					this.clienteActual = c;
+					// sincronizar id del cliente en el controlador de BD
+					controladordb.setIdClienteActual(c.getId());
 					controladordb.cerrarConexion();
 					return c;
 				}
@@ -46,6 +48,8 @@ public class GestorCliente {
 			String fechaNacimiento, String idioma) {
 		if (controladordb.startConnection()) {
 			try {
+				nombre = ControladorEntradaYSalida.letraMalluscula(nombre);
+				apellido = ControladorEntradaYSalida.letraMalluscula(apellido);
 				java.sql.Date fechaNac = java.sql.Date.valueOf(fechaNacimiento);
 				boolean resultado = controladordb.sqlCrear(nombre, apellido, usuario, contrasena, fechaNac, idioma);
 				controladordb.cerrarConexion();
@@ -232,6 +236,18 @@ public class GestorCliente {
 			ArrayList<Cancion> canciones = controladordb.obtenerCancionesPlaylist(idPlaylist);
 			controladordb.cerrarConexion();
 			return canciones;
+		}
+		return new ArrayList<>();
+	}
+
+	/**
+	 * Obtiene todos los audios disponibles para el reproductor
+	 */
+	public ArrayList<Audio> obtenerAudiosDisponibles() {
+		if (controladordb.startConnection()) {
+			ArrayList<Audio> audios = controladordb.obtenerAudios();
+			controladordb.cerrarConexion();
+			return audios;
 		}
 		return new ArrayList<>();
 	}
