@@ -85,6 +85,10 @@ public class VentanaPrincipal extends JFrame {
 		registrarPanel("reproductor", new PanelReproductor(this));
 		registrarPanel("premium", new PanelPremium(this));
 		registrarPanel("admin", new PanelAdmin(this));
+		registrarPanel("adminMusica", new PanelAdminMusica(this));
+		registrarPanel("adminPodcasts", new PanelAdminPodcasts(this));
+		// Register admin selection panel
+		registrarPanel("panelSelecionAdmin", new PanelSelecionAdmin(this));
 	}
 
 	private void registrarPanel(String nombre, JPanel panel) {
@@ -177,5 +181,24 @@ public class VentanaPrincipal extends JFrame {
 
 	public void ejecutarVentana() {
 		setVisible(true);
+	}
+
+	// ==================== ADAPTADORES COMPATIBILIDAD ====================
+	// Métodos con nombres antiguos para mantener compatibilidad con código existente
+
+	public ControladorDB getControladordb() {
+		return gestorCliente.getControladorDB();
+	}
+
+	public GestorClienteNuevo getGestorCli() {
+		return gestorCliente;
+	}
+
+	public Cliente getClientelogeado() {
+		return clienteLogueado;
+	}
+
+	public void setClientelogeado(Cliente c) {
+		this.clienteLogueado = c;
 	}
 }
