@@ -24,7 +24,7 @@ public class ReproductorAudio {
 	private int segundoActual; // Progreso actual en segundos
 	private Timer timerProgreso;
 	private ControladorDB controladordb;
-	private GestorCliente gestorCliente;
+	private GestorClienteNuevo gestorCliente;
 	private SimpleAudioPlayer player;
 	
 	// Constantes
@@ -33,7 +33,7 @@ public class ReproductorAudio {
 
 	// ============ CONSTRUCTORES ============
 
-	public ReproductorAudio(int idCliente, boolean esClientePremium, ControladorDB controladordb, GestorCliente gestorCliente) {
+	public ReproductorAudio(int idCliente, boolean esClientePremium, ControladorDB controladordb, GestorClienteNuevo gestorCliente) {
 		this.idClienteActual = idCliente;
 		this.esClientePremium = esClientePremium;
 		this.colaReproduccion = new ArrayList<>();
@@ -119,10 +119,13 @@ public class ReproductorAudio {
 			return false;
 		}
 
-		// Registrar reproducción en BD
+		// Registrar reproducción en BD (usa método central en ControladorDB)
 		if (controladordb.startConnection()) {
-			incrementarReproduccionesDB(audioActual.getId());
-			controladordb.cerrarConexion();
+			try {
+				controladordb.registrarUltimaReproduccion(idClienteActual, audioActual.getId());
+			} finally {
+				controladordb.cerrarConexion();
+			}
 		}
 
 		// Intentar reproducir audio real si existe el archivo
@@ -330,7 +333,7 @@ public class ReproductorAudio {
 			return "00:00 / 00:00";
 		}
 
-		return formatearTiempo(segundoActual) + " / " + formatearTiempo(actual.getDuratasecondi());
+		return formatearTiempo(segundoActual) + " / " + formatearTiempo(actual.getDuracionSegundos());
 	}
 
 	/**
@@ -338,11 +341,11 @@ public class ReproductorAudio {
 	 */
 	public int obtenerPorcentajeProgreso() {
 		Audio actual = obtenerAudioActual();
-		if (actual == null || actual.getDuratasecondi() == 0) {
+		if (actual == null || actual.getDuracionSegundos() == 0) {
 			return 0;
 		}
 
-		return (int) ((segundoActual * 100.0) / actual.getDuratasecondi());
+		return (int) ((segundoActual * 100.0) / actual.getDuracionSegundos());
 	}
 
 	/**
@@ -363,7 +366,7 @@ public class ReproductorAudio {
 						segundoActual++;
 
 						// Si llegó al final, pasar al siguiente
-						if (segundoActual >= actual.getDuratasecondi()) {
+						if (segundoActual >= actual.getDuracionSegundos()) {
 							siguiente();
 						}
 					}
@@ -384,26 +387,19 @@ public class ReproductorAudio {
 			return false;
 		}
 
-		if (controladordb.startConnection()) {
-			try {
-				String sql = "INSERT INTO favoritos (idCliente, idAudio) VALUES (?, ?)";
-				java.sql.PreparedStatement ps = controladordb.getConnection().prepareStatement(sql);
-				ps.setInt(1, idClienteActual);
-				ps.setInt(2, audioActual.getId());
-				
-				boolean resultado = ps.executeUpdate() > 0;
-				if (resultado) {
-					System.out.println("♥ Añadido a favoritos: " + audioActual.getNombreAudio());
-				}
-				ps.close();
-				controladordb.cerrarConexion();
-				return resultado;
-			} catch (Exception e) {
-				System.out.println("Error añadiendo a favoritos: " + e.getMessage());
-				controladordb.cerrarConexion();
-			}
+		if (!controladordb.startConnection()) {
+			return false;
 		}
-		return false;
+
+		try {
+			boolean resultado = controladordb.agregarAFavoritos(idClienteActual, audioActual.getId());
+			if (resultado) {
+				System.out.println("♥ Añadido a favoritos: " + audioActual.getNombreAudio());
+			}
+			return resultado;
+		} finally {
+			controladordb.cerrarConexion();
+		}
 	}
 
 	/**
@@ -415,44 +411,24 @@ public class ReproductorAudio {
 			return false;
 		}
 
-		if (controladordb.startConnection()) {
-			try {
-				String sql = "DELETE FROM favoritos WHERE idCliente = ? AND idAudio = ?";
-				java.sql.PreparedStatement ps = controladordb.getConnection().prepareStatement(sql);
-				ps.setInt(1, idClienteActual);
-				ps.setInt(2, audioActual.getId());
-				
-				boolean resultado = ps.executeUpdate() > 0;
-				if (resultado) {
-					System.out.println("♡ Eliminado de favoritos: " + audioActual.getNombreAudio());
-				}
-				ps.close();
-				controladordb.cerrarConexion();
-				return resultado;
-			} catch (Exception e) {
-				System.out.println("Error eliminando de favoritos: " + e.getMessage());
-				controladordb.cerrarConexion();
-			}
+		if (!controladordb.startConnection()) {
+			return false;
 		}
-		return false;
+
+		try {
+			boolean resultado = controladordb.eliminarDeFavoritos(idClienteActual, audioActual.getId());
+			if (resultado) {
+				System.out.println("♡ Eliminado de favoritos: " + audioActual.getNombreAudio());
+			}
+			return resultado;
+		} finally {
+			controladordb.cerrarConexion();
+		}
 	}
 
 	// ============ INTEGRACIÓN CON BD ============
 
-	/**
-	 * Incrementa el contador de reproducciones en BD
-	 */
-	private void incrementarReproduccionesDB(int idAudio) {
-		try {
-			String sql = "UPDATE audio SET nReproducciones = nReproducciones + 1 WHERE idAudio = ?";
-			java.sql.PreparedStatement ps = controladordb.getConnection().prepareStatement(sql);
-			ps.setInt(1, idAudio);
-			ps.executeUpdate();
-			ps.close();
-		} catch (Exception e) {
-			System.out.println("Error actualizando reproducciones: " + e.getMessage());
-		}
-	}
+	// incremento de reproducciones ahora gestionado por ControladorDB.registrarUltimaReproduccion()
 
 	// ============ EXPORTACIÓN DE METADATOS ============
 
@@ -488,8 +464,8 @@ public class ReproductorAudio {
 			writer.write("ID: " + audioActual.getId() + "\n");
 			writer.write("Nombre: " + audioActual.getNombreAudio() + "\n");
 			writer.write("Tipo: " + audioActual.getTipo() + "\n");
-			writer.write("Duración: " + formatearTiempo(audioActual.getDuratasecondi()) + "\n");
-			writer.write("Reproducciones: " + audioActual.getNumRep() + "\n");
+			writer.write("Duración: " + formatearTiempo(audioActual.getDuracionSegundos()) + "\n");
+			writer.write("Reproducciones: " + audioActual.getReproducciones() + "\n");
 			writer.write("Archivo: " + audioActual.getArchivo() + "\n");
 			writer.write("Usuario: " + idClienteActual + "\n");
 			writer.write("Tipo Usuario: " + (esClientePremium ? "Premium" : "Free") + "\n");
@@ -536,7 +512,7 @@ public class ReproductorAudio {
 				Audio audio = colaReproduccion.get(i);
 				String prefijo = (i == indiceActual) ? "▶ " : "  ";
 				writer.write(prefijo + (i + 1) + ". " + audio.getNombreAudio() + 
-						" [" + formatearTiempo(audio.getDuratasecondi()) + "]\n");
+							" [" + formatearTiempo(audio.getDuracionSegundos()) + "]\n");
 			}
 
 			writer.close();
@@ -564,9 +540,9 @@ public class ReproductorAudio {
 		info.append("=== AUDIO ACTUAL ===\n");
 		info.append("Título: ").append(audio.getNombreAudio()).append("\n");
 		info.append("Tipo: ").append(audio.getTipo()).append("\n");
-		info.append("Duración: ").append(formatearTiempo(audio.getDuratasecondi())).append("\n");
+		info.append("Duración: ").append(formatearTiempo(audio.getDuracionSegundos())).append("\n");
 		info.append("Progreso: ").append(obtenerProgreso()).append(" (").append(obtenerPorcentajeProgreso()).append("%)\n");
-		info.append("Reproducciones: ").append(audio.getNumRep()).append("\n");
+		info.append("Reproducciones: ").append(audio.getReproducciones()).append("\n");
 		info.append("Estado: ").append(enReproduccion ? "▶ En reproducción" : "⏸ Pausado").append("\n");
 		info.append("Posición en cola: ").append((indiceActual + 1)).append(" de ").append(colaReproduccion.size()).append("\n");
 		
@@ -599,10 +575,10 @@ public class ReproductorAudio {
 			Audio audio = colaReproduccion.get(i);
 			if (i == indiceActual) {
 				resumen.append("▶ ").append(i + 1).append(". ").append(audio.getNombreAudio())
-						.append(" [").append(formatearTiempo(audio.getDuratasecondi())).append("]\n");
+						.append(" [").append(formatearTiempo(audio.getDuracionSegundos())).append("]\n");
 			} else {
 				resumen.append("  ").append(i + 1).append(". ").append(audio.getNombreAudio())
-						.append(" [").append(formatearTiempo(audio.getDuratasecondi())).append("]\n");
+						.append(" [").append(formatearTiempo(audio.getDuracionSegundos())).append("]\n");
 			}
 		}
 
@@ -613,4 +589,11 @@ public class ReproductorAudio {
 		return resumen.toString();
 	}
 
+	// ============ GETTERS PÚBLICOS ============
+	
+	public boolean isEnReproduccion() {
+		return enReproduccion;
+	}
+
 }
+
