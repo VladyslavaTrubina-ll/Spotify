@@ -1,6 +1,6 @@
 package panel;
 
-import controlador.GestorCliente;
+import controlador.GestorClienteNuevo;
 import java.awt.BorderLayout;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
@@ -15,7 +15,7 @@ import vista.VentanaPrincipal;
 public class PanelFavoritos extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final GestorCliente gestor;
+	private final GestorClienteNuevo gestor;
 	private final DefaultListModel<Audio> modeloFavoritos;
 	private final JTextArea txtDetalle;
 

@@ -1,6 +1,6 @@
 package panel;
 
-import controlador.GestorCliente;
+import controlador.GestorClienteNuevo;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -16,7 +16,7 @@ import vista.VentanaPrincipal;
 public class PanelLogin extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final GestorCliente gestor;
+	private final GestorClienteNuevo gestor;
 	private final JTextField txtUsuario;
 	private final JPasswordField txtContrasena;
 
@@ -77,14 +77,15 @@ public class PanelLogin extends JPanel implements PanelRefrescable {
 			return;
 		}
 
-		if (gestor.login(usuario, contrasena) == null) {
+		var cliente = gestor.login(usuario, contrasena);
+		if (cliente == null) {
 			ventana.mostrarMensaje("Usuario o contraseña incorrectos.");
 			return;
 		}
 
-		ventana.setClienteLogueado(gestor.getClienteActual());
+		ventana.setClienteLogueado(cliente);
 		txtContrasena.setText("");
-		ventana.cambiarPanel(gestor.esAdmin(gestor.getClienteActual()) ? "admin" : "menuCliente");
+		ventana.cambiarPanel(gestor.esAdmin(cliente) ? "admin" : "menuCliente");
 	}
 
 	@Override

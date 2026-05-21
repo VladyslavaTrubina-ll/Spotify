@@ -3,11 +3,18 @@ package panel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import javax.sound.sampled.*;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import modelo.Cancion;
 import vista.VentanaPrincipal;
 import controlador.ReproductorAudio;
@@ -15,8 +22,8 @@ import controlador.ReproductorAudio;
 public class PanelReproductor extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final DefaultListModel<Cancion> modeloCanciones;
-	private final JList<Cancion> listaCanciones;
+	private final DefaultListModel<String> modeloCanciones;
+	private final JList<String> listaCanciones;
 	private final JLabel lblImagen;
 	private final JLabel lblTitulo;
 	private final JLabel lblProgreso;
@@ -47,56 +54,49 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 		this.reproduciendo = false;
 		this.timerUI = null;
 
-		setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-		setLayout(new BorderLayout(12, 12));
+		setLayout(new BorderLayout(10, 10));
+		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		lblImagen.setPreferredSize(new Dimension(320, 320));
-		lblImagen.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+		// ================= TOP PANEL =================
+		JPanel top = new JPanel(new BorderLayout());
+		JButton btnVolver = new JButton("Volver");
+		btnVolver.addActionListener(e -> {
+			pausar();
+			ventana.cambiarPanel("menuCliente");
+		});
+		top.add(btnVolver, BorderLayout.WEST);
+		add(top, BorderLayout.NORTH);
 
+		// ================= CENTER PANEL =================
+		JPanel center = new JPanel(new BorderLayout(15, 15));
+
+		// ================= LISTA CANCIONES =================
+		JPanel panelLista = new JPanel(new BorderLayout());
+		panelLista.setBorder(BorderFactory.createTitledBorder("Canciones"));
+
+		listaCanciones.setFont(new Font("Arial", Font.BOLD, 16));
+		listaCanciones.setFixedCellHeight(45);
 		listaCanciones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		listaCanciones.setVisibleRowCount(8);
+
+		JScrollPane scroll = new JScrollPane(listaCanciones);
+		panelLista.add(scroll, BorderLayout.CENTER);
+
 		cargarCanciones();
 
-		JPanel izquierda = new JPanel(new BorderLayout(8, 8));
-		izquierda.add(new JScrollPane(listaCanciones), BorderLayout.CENTER);
-		JButton btnVolver = new JButton("Volver");
-		izquierda.add(btnVolver, BorderLayout.SOUTH);
+		// DOBLE CLICK PARA REPRODUCIR
+		listaCanciones.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					int index = listaCanciones.getSelectedIndex();
+					if (index >= 0) {
+						seleccionarCancion(index, true);
+					}
+				}
+			}
+		});
 
-		JPanel centro = new JPanel(new BorderLayout(8, 8));
-		centro.add(lblImagen, BorderLayout.CENTER);
-		centro.add(lblTitulo, BorderLayout.NORTH);
-		centro.add(lblProgreso, BorderLayout.SOUTH);
-
-		JPanel controles = new JPanel(new GridLayout(2, 4, 8, 8));
-		JButton btnAnterior = new JButton("Anterior");
-		JButton btnPlay = new JButton("Play");
-		JButton btnPausa = new JButton("Pausa");
-		JButton btnSiguiente = new JButton("Siguiente");
-		JButton btnExportar = new JButton("Exportar info");
-		JButton btnFavorito = new JButton("Favorito");
-
-		controles.add(btnAnterior);
-		controles.add(btnPlay);
-		controles.add(btnPausa);
-		controles.add(btnSiguiente);
-		controles.add(cmbVelocidad);
-		controles.add(btnFavorito);
-		controles.add(btnExportar);
-		controles.add(lblEstado);
-
-		txtDetalle.setEditable(false);
-		txtDetalle.setLineWrap(true);
-		txtDetalle.setWrapStyleWord(true);
-
-		JPanel derecha = new JPanel(new BorderLayout(8, 8));
-		derecha.add(controles, BorderLayout.NORTH);
-		derecha.add(sliderProgreso, BorderLayout.CENTER);
-		derecha.add(new JScrollPane(txtDetalle), BorderLayout.SOUTH);
-
-		add(izquierda, BorderLayout.WEST);
-		add(centro, BorderLayout.CENTER);
-		add(derecha, BorderLayout.EAST);
-
+		// SINGLE CLICK PARA SELECCIONAR
 		listaCanciones.addListSelectionListener(e -> {
 			if (!e.getValueIsAdjusting()) {
 				int seleccion = listaCanciones.getSelectedIndex();
@@ -106,19 +106,77 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 			}
 		});
 
+		// ================= PANEL CENTRO (IMAGEN + INFO) =================
+		JPanel panelCentro = new JPanel(new BorderLayout(8, 8));
+		lblImagen.setPreferredSize(new Dimension(300, 300));
+		lblImagen.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+		panelCentro.add(lblImagen, BorderLayout.CENTER);
+		panelCentro.add(lblTitulo, BorderLayout.NORTH);
+		panelCentro.add(lblProgreso, BorderLayout.SOUTH);
+
+		// ================= PANEL BOTONES =================
+		JPanel panelBotones = new JPanel();
+		panelBotones.setLayout(new GridLayout(3, 2, 10, 10));
+		panelBotones.setPreferredSize(new Dimension(220, 300));
+
+		JButton btnAnterior = new JButton("◄ Anterior");
+		JButton btnPlay = new JButton("▶ Play");
+		JButton btnPausa = new JButton("⏸ Pausa");
+		JButton btnSiguiente = new JButton("Siguiente ►");
+		JButton btnFavorito = new JButton("♥ Favorito");
+		JButton btnExportar = new JButton("Exportar");
+
+		Font fontBotones = new Font("Arial", Font.BOLD, 14);
+		btnAnterior.setFont(fontBotones);
+		btnPlay.setFont(fontBotones);
+		btnPausa.setFont(fontBotones);
+		btnSiguiente.setFont(fontBotones);
+		btnFavorito.setFont(fontBotones);
+		btnExportar.setFont(fontBotones);
+
+		panelBotones.add(btnAnterior);
+		panelBotones.add(btnSiguiente);
+		panelBotones.add(btnPlay);
+		panelBotones.add(btnPausa);
+		panelBotones.add(btnFavorito);
+		panelBotones.add(btnExportar);
+
 		btnAnterior.addActionListener(e -> anterior());
 		btnPlay.addActionListener(e -> play());
 		btnPausa.addActionListener(e -> pausar());
 		btnSiguiente.addActionListener(e -> siguiente());
 		btnExportar.addActionListener(e -> exportar());
 		btnFavorito.addActionListener(e -> alternarFavorito());
-		btnVolver.addActionListener(e -> {
-			pausar();
-			ventana.cambiarPanel("menuCliente");
-		});
 
+		// ================= PANEL DERECHO (CONTROLES + DETALLES) =================
+		JPanel panelDerecho = new JPanel(new BorderLayout(8, 8));
+		
+		JPanel panelControles = new JPanel(new GridLayout(2, 1, 8, 8));
+		panelControles.add(new JLabel("Velocidad:"));
+		panelControles.add(cmbVelocidad);
 		cmbVelocidad.addActionListener(e -> aplicarVelocidad());
+
+		txtDetalle.setEditable(false);
+		txtDetalle.setLineWrap(true);
+		txtDetalle.setWrapStyleWord(true);
+
+		panelDerecho.add(panelControles, BorderLayout.NORTH);
+		panelDerecho.add(sliderProgreso, BorderLayout.CENTER);
+		panelDerecho.add(new JScrollPane(txtDetalle), BorderLayout.SOUTH);
+
 		sliderProgreso.setEnabled(false);
+
+		// LAYOUT PRINCIPAL
+		center.add(panelLista, BorderLayout.WEST);
+		center.add(panelCentro, BorderLayout.CENTER);
+		center.add(panelDerecho, BorderLayout.EAST);
+
+		JPanel panelSur = new JPanel(new BorderLayout());
+		panelSur.add(lblEstado, BorderLayout.CENTER);
+		panelSur.add(panelBotones, BorderLayout.EAST);
+
+		add(center, BorderLayout.CENTER);
+		add(panelSur, BorderLayout.SOUTH);
 
 		if (modeloCanciones.getSize() > 0) {
 			listaCanciones.setSelectedIndex(0);
@@ -136,16 +194,16 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 	private void cargarCanciones() {
 		modeloCanciones.clear();
 		for (Cancion cancion : cancionesDemo) {
-			modeloCanciones.addElement(cancion);
+			modeloCanciones.addElement(cancion.getNombreAudio() + " | " + cancion.getDuracionSegundos() + "s");
 		}
 	}
 
 	private void seleccionarCancion(int indice, boolean autoPlay) {
-		if (indice < 0 || indice >= modeloCanciones.size()) {
+		if (indice < 0 || indice >= cancionesDemo.size()) {
 			return;
 		}
 		indiceActual = indice;
-		Cancion cancion = modeloCanciones.getElementAt(indiceActual);
+		Cancion cancion = cancionesDemo.get(indiceActual);
 		lblTitulo.setText(cancion.getNombreAudio());
 		lblImagen.setIcon(cargarImagen(cancion.getFoto()));
 		lblEstado.setText(reproduciendo ? "Reproduciendo" : "Pausado");
@@ -167,7 +225,7 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 	}
 
 	private void play() {
-		if (modeloCanciones.isEmpty()) {
+		if (cancionesDemo.isEmpty()) {
 			JOptionPane.showMessageDialog(this, "No hay canciones para reproducir");
 			return;
 		}
@@ -178,7 +236,7 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 				clip.close();
 			}
 
-			Cancion cancion = modeloCanciones.getElementAt(indiceActual);
+			Cancion cancion = cancionesDemo.get(indiceActual);
 			clip = AudioSystem.getClip();
 			clip.open(AudioSystem.getAudioInputStream(new File(cancion.getArchivo())));
 			aplicarVelocidad();
@@ -202,19 +260,19 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 	}
 
 	private void siguiente() {
-		if (modeloCanciones.isEmpty()) {
+		if (cancionesDemo.isEmpty()) {
 			return;
 		}
-		indiceActual = (indiceActual + 1) % modeloCanciones.size();
+		indiceActual = (indiceActual + 1) % cancionesDemo.size();
 		listaCanciones.setSelectedIndex(indiceActual);
 		seleccionarCancion(indiceActual, true);
 	}
 
 	private void anterior() {
-		if (modeloCanciones.isEmpty()) {
+		if (cancionesDemo.isEmpty()) {
 			return;
 		}
-		indiceActual = (indiceActual - 1 + modeloCanciones.size()) % modeloCanciones.size();
+		indiceActual = (indiceActual - 1 + cancionesDemo.size()) % cancionesDemo.size();
 		listaCanciones.setSelectedIndex(indiceActual);
 		seleccionarCancion(indiceActual, true);
 	}
@@ -265,25 +323,65 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 	private void exportar() {
 		Cancion cancion = obtenerCancionActual();
 		if (cancion == null) {
+			JOptionPane.showMessageDialog(this, "Selecciona una canción para exportar.");
 			return;
 		}
-		JOptionPane.showMessageDialog(this,
-				"Canción: " + cancion.getNombreAudio() + "\nArchivo: " + cancion.getArchivo() + "\nImagen: " + cancion.getFoto());
+
+		String nombreBase = cancion.getNombreAudio() == null || cancion.getNombreAudio().isBlank()
+				? "cancion_exportada"
+				: cancion.getNombreAudio().replaceAll("[\\\\/:*?\"<>|]", "_");
+
+		JFileChooser chooser = new JFileChooser();
+		chooser.setDialogTitle("Exportar información de la canción");
+		chooser.setSelectedFile(new File(nombreBase + ".txt"));
+		chooser.setFileFilter(new FileNameExtensionFilter("Archivos de texto (*.txt)", "txt"));
+
+		int resultado = chooser.showSaveDialog(this);
+		if (resultado != JFileChooser.APPROVE_OPTION) {
+			return;
+		}
+
+		File archivo = chooser.getSelectedFile();
+		if (!archivo.getName().toLowerCase().endsWith(".txt")) {
+			archivo = new File(archivo.getParentFile(), archivo.getName() + ".txt");
+		}
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivo))) {
+			writer.write("=== Información de la canción ===");
+			writer.newLine();
+			writer.write("Nombre: " + cancion.getNombreAudio());
+			writer.newLine();
+			writer.write("Archivo: " + cancion.getArchivo());
+			writer.newLine();
+			writer.write("Imagen: " + cancion.getFoto());
+			writer.newLine();
+			writer.write("Duración: " + cancion.getDuracionSegundos() + "s");
+			writer.newLine();
+			writer.write("Reproducciones: " + cancion.getReproducciones());
+			writer.newLine();
+			writer.write("Estado: " + (reproduciendo ? "Reproduciendo" : "Pausado"));
+			writer.newLine();
+
+			JOptionPane.showMessageDialog(this,
+					"Exportación completada correctamente.\n\nArchivo guardado en:\n" + archivo.getAbsolutePath());
+		} catch (IOException e) {
+			JOptionPane.showMessageDialog(this, "No se pudo exportar la canción: " + e.getMessage());
+		}
 	}
 
 	private Cancion obtenerCancionActual() {
-		if (modeloCanciones.isEmpty() || indiceActual < 0 || indiceActual >= modeloCanciones.size()) {
+		if (cancionesDemo.isEmpty() || indiceActual < 0 || indiceActual >= cancionesDemo.size()) {
 			return null;
 		}
-		return modeloCanciones.getElementAt(indiceActual);
+		return cancionesDemo.get(indiceActual);
 	}
 
 	private void actualizarDetalle(Cancion cancion) {
 		txtDetalle.setText("Título: " + cancion.getNombreAudio() + "\n" +
 				"Audio: " + cancion.getArchivo() + "\n" +
 				"Imagen: " + cancion.getFoto() + "\n" +
-				"Duración: " + cancion.getDuracionSegundos() + "\n" +
-				"Reproduciendo: " + reproduciendo);
+				"Duración: " + cancion.getDuracionSegundos() + "s\n" +
+				"Estado: " + (reproduciendo ? "Reproduciendo" : "Pausado"));
 	}
 
 	private void iniciarActualizacionUI() {
