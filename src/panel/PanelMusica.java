@@ -1,6 +1,6 @@
 package panel;
 
-import controlador.GestorCliente;
+import controlador.GestorClienteNuevo;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import vista.VentanaPrincipal;
 public class PanelMusica extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final GestorCliente gestor;
+	private final GestorClienteNuevo gestor;
 	private final JComboBox<String> cmbArtistas;
 	private final DefaultListModel<Album> modeloAlbums;
 	private final DefaultListModel<Cancion> modeloCanciones;
@@ -68,7 +68,7 @@ public class PanelMusica extends JPanel implements PanelRefrescable {
 			if (!e.getValueIsAdjusting()) {
 				Cancion cancion = listaCanciones.getSelectedValue();
 				if (cancion != null) {
-					txtResumen.setText("Canción seleccionada: " + cancion.getNombreAudio() + "\nDuración: " + cancion.durataConvertida());
+					txtResumen.setText("Canción seleccionada: " + cancion.getNombreAudio() + "\nDuración: " + cancion.duracionConvertida());
 				}
 			}
 		});

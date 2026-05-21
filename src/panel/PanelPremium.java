@@ -1,6 +1,6 @@
 package panel;
 
-import controlador.GestorCliente;
+import controlador.GestorClienteNuevo;
 import java.awt.BorderLayout;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -13,7 +13,7 @@ import vista.VentanaPrincipal;
 public class PanelPremium extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final GestorCliente gestor;
+	private final GestorClienteNuevo gestor;
 	private final JLabel lblEstado;
 
 	public PanelPremium(VentanaPrincipal ventana) {

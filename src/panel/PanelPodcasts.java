@@ -1,6 +1,6 @@
 package panel;
 
-import controlador.GestorCliente;
+import controlador.GestorClienteNuevo;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import vista.VentanaPrincipal;
 public class PanelPodcasts extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
-	private final GestorCliente gestor;
+	private final GestorClienteNuevo gestor;
 	private final JComboBox<String> cmbPodcasters;
 	private final DefaultListModel<Podcast> modeloPodcasts;
 	private final JTextArea txtResumen;

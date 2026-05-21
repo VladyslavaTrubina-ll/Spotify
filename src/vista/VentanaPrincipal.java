@@ -11,11 +11,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import modelo.*;
 import panel.*;
-import controlador.GestorCliente;
+import controlador.*;
 
 public class VentanaPrincipal extends JFrame {
 
-	private final GestorCliente gestorCliente;
+	private final GestorClienteNuevo gestorCliente;
 	private final CardLayout cardLayout;
 	private final JPanel panelContenedor;
 	private final Map<String, String> aliasPaneles;
@@ -33,7 +33,7 @@ public class VentanaPrincipal extends JFrame {
 
 	public VentanaPrincipal(String nombreBaseDatos) {
 		super("Spotify");
-		this.gestorCliente = new GestorCliente(nombreBaseDatos);
+		this.gestorCliente = new GestorClienteNuevo(nombreBaseDatos);
 		this.cardLayout = new CardLayout();
 		this.panelContenedor = new JPanel(cardLayout);
 		this.aliasPaneles = new HashMap<>();
@@ -101,7 +101,7 @@ public class VentanaPrincipal extends JFrame {
 		}
 	}
 
-	public GestorCliente getGestorCliente() {
+	public GestorClienteNuevo getGestorCliente() {
 		return gestorCliente;
 	}
 
