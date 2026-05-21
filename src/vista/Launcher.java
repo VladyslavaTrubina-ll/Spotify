@@ -10,6 +10,10 @@ import java.io.IOException;
 import modelo.*;
 import controlador.*;
 
+/**
+ * Punto de entrada de consola de la aplicación (modo texto). Proporciona
+ * menús de interacción por terminal para pruebas rápidas y utilidades.
+ */
 public class Launcher {
 
     private static final String NOMBRE_BD = "spoty";
@@ -20,6 +24,11 @@ public class Launcher {
         private static ControladorEntradaYSalida entrada;
         private static ArrayList<Audio> audiosReproductor;
 
+        /**
+         * Punto de entrada de la aplicación en modo consola.
+         *
+         * @param args argumentos de línea de comandos (no usados)
+         */
         public static void main(String[] args) {
             entrada = new ControladorEntradaYSalida();
             gestorCliente = new GestorClienteNuevo(NOMBRE_BD);

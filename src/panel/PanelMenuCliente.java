@@ -9,11 +9,20 @@ import javax.swing.SwingConstants;
 import modelo.Cliente;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel principal del cliente que ofrece navegación hacia música,
+ * podcasts, favoritos, playlists y opciones de cuenta.
+ */
 public class PanelMenuCliente extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
 	private final JLabel lblBienvenida;
 
+	/**
+	 * Panel de navegación principal para clientes autenticados.
+	 *
+	 * @param ventana ventana principal para cambiar paneles y acceder al gestor
+	 */
 	public PanelMenuCliente(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.lblBienvenida = new JLabel("", SwingConstants.CENTER);

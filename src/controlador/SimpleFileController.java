@@ -5,9 +5,19 @@ import java.nio.file.*;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Pequeño controlador de ficheros para leer/escribir líneas en un
+ * directorio dado. Utilizado para import/export ligero de playlists
+ * y datos de ejemplo.
+ */
 public class SimpleFileController {
     private final Path dir;
 
+    /**
+     * Crea un controlador de ficheros para el directorio dado.
+     *
+     * @param dirPath ruta del directorio base donde se leerán/escribir archivos
+     */
     public SimpleFileController(String dirPath) {
         this.dir = Paths.get(dirPath);
         try {
@@ -17,6 +27,12 @@ public class SimpleFileController {
         }
     }
 
+    /**
+     * Lee todas las líneas de un fichero dentro del directorio base.
+     *
+     * @param filename nombre del fichero a leer
+     * @return lista de líneas (vacía si no existe o hay error)
+     */
     public List<String> readLines(String filename) {
         Path file = dir.resolve(filename);
         try {

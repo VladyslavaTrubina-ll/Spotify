@@ -13,6 +13,10 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel de registro de usuarios: formulario para crear una nueva cuenta
+ * y validación básica de los campos de entrada antes de enviar al gestor.
+ */
 public class PanelRegistro extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -24,6 +28,11 @@ public class PanelRegistro extends JPanel implements PanelRefrescable {
 	private final JTextField txtFechaNacimiento;
 	private final JComboBox<String> cmbIdioma;
 
+	/**
+	 * Construye el formulario de registro y enlaza acciones de UI.
+	 *
+	 * @param ventana ventana principal (para navegación y gestor)
+	 */
 	public PanelRegistro(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

@@ -10,12 +10,22 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel de administración principal con accesos a las secciones de
+ * gestión (música, podcasts) y resúmenes estadísticos.
+ */
 public class PanelAdmin extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
 	private final GestorClienteNuevo gestor;
 	private final JTextArea txtArea;
 
+
+	/**
+	 * Panel principal de administración que enlaza a secciones de gestión.
+	 *
+	 * @param ventana referencia a `VentanaPrincipal` para navegación y acceso al gestor
+	 */
 	public PanelAdmin(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

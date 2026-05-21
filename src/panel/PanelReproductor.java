@@ -19,6 +19,11 @@ import modelo.Cancion;
 import vista.VentanaPrincipal;
 import controlador.ReproductorAudio;
 
+/**
+ * Panel reproductor con controles de reproducción, lista de canciones
+ * y visualización de estado. Incluye funciones de play/pause, avance
+ * y marcado de favoritos.
+ */
 public class PanelReproductor extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -37,6 +42,11 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 	private boolean reproduciendo;
 	private Timer timerUI;
 
+	/**
+	 * Panel reproductor: inicializa controles y lista de reproducción.
+	 *
+	 * @param ventana ventana principal para navegación y acceso al gestor
+	 */
 	public PanelReproductor(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.modeloCanciones = new DefaultListModel<>();

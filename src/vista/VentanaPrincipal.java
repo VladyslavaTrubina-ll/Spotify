@@ -13,6 +13,11 @@ import modelo.*;
 import panel.*;
 import controlador.*;
 
+/**
+ * Ventana principal (GUI) que contiene y gestiona todos los paneles Swing
+ * de la aplicación. Actúa como puente entre la interfaz gráfica y el
+ * `GestorClienteNuevo` para operaciones de negocio y navegación.
+ */
 public class VentanaPrincipal extends JFrame {
 
 	private final GestorClienteNuevo gestorCliente;

@@ -10,12 +10,21 @@ import javax.swing.SwingConstants;
 import modelo.Cliente;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel para gestionar la actualización a cuenta Premium. Muestra
+ * estado de la cuenta y permite solicitar la actualización.
+ */
 public class PanelPremium extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
 	private final GestorClienteNuevo gestor;
 	private final JLabel lblEstado;
 
+	/**
+	 * Panel para gestionar la actualización a Premium.
+	 *
+	 * @param ventana ventana principal para cambiar paneles y acceder al gestor
+	 */
 	public PanelPremium(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

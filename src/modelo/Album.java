@@ -10,8 +10,16 @@ public class Album {
 	private String imagen;
 	private int idMusico;
 
+	/**
+	 * Constructor vacío de Album.
+	 */
 	public Album() {}
 
+	/**
+	 * Constructor completo de Album.
+	 *
+	 * @param id identificador
+	 */
 	public Album(int id, String titulo, String anno, String genero, String imagen, int idMusico) {
 		this.id = id;
 		this.titulo = titulo;

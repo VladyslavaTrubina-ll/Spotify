@@ -12,6 +12,10 @@ import javax.swing.JTextArea;
 import modelo.Audio;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel que muestra los audios marcados como favoritos por el cliente
+ * autenticado. Permite listar, ver detalles y quitar elementos de favoritos.
+ */
 public class PanelFavoritos extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -19,6 +23,11 @@ public class PanelFavoritos extends JPanel implements PanelRefrescable {
 	private final DefaultListModel<Audio> modeloFavoritos;
 	private final JTextArea txtDetalle;
 
+	/**
+	 * Crea el panel de favoritos y configura listeners y componentes.
+	 *
+	 * @param ventana referencia a la `VentanaPrincipal` para navegación y acceso al gestor
+	 */
 	public PanelFavoritos(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

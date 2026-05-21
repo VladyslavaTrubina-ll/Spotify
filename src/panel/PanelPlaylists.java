@@ -13,6 +13,10 @@ import javax.swing.JTextArea;
 import modelo.Playlist;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel para gestionar las playlists del cliente: ver, crear,
+ * eliminar y exportar listas de reproducción.
+ */
 public class PanelPlaylists extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -20,6 +24,11 @@ public class PanelPlaylists extends JPanel implements PanelRefrescable {
 	private final DefaultListModel<Playlist> modeloPlaylists;
 	private final JTextArea txtDetalle;
 
+	/**
+	 * Crea el panel de playlists del cliente y enlaza acciones.
+	 *
+	 * @param ventana ventana principal para acceso al gestor y navegación
+	 */
 	public PanelPlaylists(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

@@ -16,6 +16,10 @@ import modelo.Album;
 import modelo.Cancion;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel para explorar música: muestra artistas, álbumes y canciones.
+ * Permite navegar por discografías y reproducir/añadir contenidos.
+ */
 public class PanelMusica extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -25,6 +29,11 @@ public class PanelMusica extends JPanel implements PanelRefrescable {
 	private final DefaultListModel<Cancion> modeloCanciones;
 	private final JTextArea txtResumen;
 
+	/**
+	 * Inicializa el panel de exploración musical (artistas, álbumes y canciones).
+	 *
+	 * @param ventana ventana principal para acceder al gestor y navegación
+	 */
 	public PanelMusica(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

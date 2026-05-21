@@ -16,6 +16,10 @@ import modelo.Podcast;
 import modelo.Podcaster;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel para visualizar podcasts y seleccionar podcasters. Muestra
+ * lista de podcasts disponibles y un resumen del seleccionado.
+ */
 public class PanelPodcasts extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -24,6 +28,11 @@ public class PanelPodcasts extends JPanel implements PanelRefrescable {
 	private final DefaultListModel<Podcast> modeloPodcasts;
 	private final JTextArea txtResumen;
 
+	/**
+	 * Inicializa el panel de podcasts y configura componentes.
+	 *
+	 * @param ventana ventana principal para acceso al gestor y navegación
+	 */
 	public PanelPodcasts(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();

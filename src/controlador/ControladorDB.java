@@ -12,6 +12,12 @@ import java.sql.Time;
 import java.util.ArrayList;
 import modelo.*;
 
+/**
+ * Capa de acceso a base de datos (DAO) que encapsula operaciones JDBC
+ * sobre la base de datos `spoty`. Proporciona métodos para autenticación,
+ * gestión de clientes, artistas, playlists y operaciones relacionadas con
+ * audios. Mantiene una conexión interna reutilizable.
+ */
 public class ControladorDB {
 
     private Connection conect;
@@ -25,8 +31,14 @@ public class ControladorDB {
     public ControladorDB() {
 	}
   
-  //Iniciar conexion
-	public boolean startConnection() {
+		/**
+		 * Inicia la conexión JDBC con la base de datos configurada en
+		 * `this.nombreDB`. Devuelve true si la conexión se estableció.
+		 *
+		 * @return true si la conexión fue exitosa
+		 */
+	//Iniciar conexion
+		public boolean startConnection() {
 		boolean conexionestablecida = false;
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
@@ -40,10 +52,25 @@ public class ControladorDB {
 		return conexionestablecida;
 	}
 
+	/**
+	 * Intenta iniciar sesión delegando en `sqlLogin`.
+	 *
+	 * @param alias nombre de usuario
+	 * @param contrasenaUsuario contraseña
+	 * @return true si las credenciales son válidas
+	 */
 	public boolean iniciarSesion(String alias, String contrasenaUsuario) {
 		return sqlLogin(alias, contrasenaUsuario);
 	}
 
+	/**
+	 * Consulta la tabla `cliente` para validar credenciales.
+	 * Si la autenticación es correcta, almacena `idClienteActual`.
+	 *
+	 * @param nombreUsuario usuario
+	 * @param contrasenaUsuario contraseña
+	 * @return true si existe un cliente con esas credenciales
+	 */
 	public boolean sqlLogin(String nombreUsuario, String contrasenaUsuario) {
 		if (!hayConexion()) {
 			return false;
@@ -65,8 +92,14 @@ public class ControladorDB {
 		return false;
 	}
 
-	public boolean sqlCrear(String nombre, String apellido, String alias, String contrasenaUsuario, Date fechaNacimiento,
-			String idioma) {
+	    /**
+	     * Crea un nuevo registro en la tabla `cliente`.
+	     * Convierte el `idioma` a id mediante `resolverIdioma`.
+	     *
+	     * @return true si la inserción fue exitosa
+	     */
+	    public boolean sqlCrear(String nombre, String apellido, String alias, String contrasenaUsuario, Date fechaNacimiento,
+		    String idioma) {
 		if (!hayConexion()) {
 			return false;
 		}
@@ -124,6 +157,12 @@ public class ControladorDB {
 		}
 	}
 
+	/**
+	 * Añade una playlist para el `idClienteActual` usando la fecha actual.
+	 *
+	 * @param nombrePlaylist título de la playlist
+	 * @return true si la inserción fue satisfactoria
+	 */
 	public boolean anadirPlaylist(String nombrePlaylist) {
 		if (!hayConexion() || idClienteActual <= 0) {
 			return false;
@@ -140,6 +179,12 @@ public class ControladorDB {
 		}
 	}
 
+	/**
+	 * Borra una playlist del cliente actual por título.
+	 *
+	 * @param nombrePlaylist título de la playlist a borrar
+	 * @return true si se eliminó alguna fila
+	 */
 	public boolean borrarPlaylist(String nombrePlaylist) {
 		if (!hayConexion() || idClienteActual <= 0) {
 			return false;
@@ -204,11 +249,19 @@ public class ControladorDB {
 		}
 	}
 
+	/**
+	 * Cierra la conexión con la base de datos delegando en `closeConnection()`.
+	 */
 	public void cerrarConexion() {
 		closeConnection();
 	}
 	
 	// Cerrar conexion
+	/**
+	 * Cierra la conexión JDBC si está abierta.
+	 *
+	 * @return true si la conexión se cerró correctamente
+	 */
 	public boolean closeConnection() {
 		boolean connectionClosed = false;
 
@@ -224,19 +277,28 @@ public class ControladorDB {
 	}
 
 	/**
-	 * Obtiene la conexión activa (para uso en otras clases)
+	 * Obtiene la conexión JDBC actualmente abierta (puede ser null).
+	 *
+	 * @return la conexión activa o null
 	 */
 	public Connection getConnection() {
 		return this.conect;
 	}
 
 	/**
-	 * Establece el id del cliente actual (útil cuando la autenticación se realiza fuera de sqlLogin)
+	 * Establece el id del cliente actual.
+	 *
+	 * @param id id del cliente
 	 */
 	public void setIdClienteActual(int id) {
 		this.idClienteActual = id;
 	}
 
+	/**
+	 * Obtiene el identificador del cliente actualmente autenticado.
+	 *
+	 * @return id del cliente o -1 si no hay sesión
+	 */
 	public int getIdClienteActual() {
 		return idClienteActual;
 	}
@@ -292,7 +354,12 @@ private boolean hayConexion() {
 			return clientes;
 		}
 
-		public ArrayList<Musico> obtenerMusicos() {
+		/**
+		 * Obtiene la lista de músicos registrados en la base de datos.
+		 *
+		 * @return lista de `Musico`
+		 */
+			public ArrayList<Musico> obtenerMusicos() {
 			ArrayList<Musico> musicos = new ArrayList<Musico>();
 			String query = "SELECT a.idArtista,a.nombreArtistico,a.genero,a.descripcion,a.imagen,m.caracteristica"
 					+ " FROM artista a join musico m on a.idArtista = m.idMusico";
@@ -308,7 +375,12 @@ private boolean hayConexion() {
 			return musicos;
 		}
 
-		public ArrayList<Podcaster> obtenerPodcasters() {
+		/**
+		 * Obtiene la lista de podcasters registrados.
+		 *
+		 * @return lista de `Podcaster`
+		 */
+			public ArrayList<Podcaster> obtenerPodcasters() {
 			ArrayList<Podcaster> podcasters = new ArrayList<Podcaster>();
 			String query = " SELECT a.idArtista,a.nombreArtistico,a.genero,a.descripcion,"
 					+ "a.imagen FROM artista a join podcaster p on a.idArtista = p.idPodcaster";
@@ -324,7 +396,13 @@ private boolean hayConexion() {
 			return podcasters;
 		}
 
-		public ArrayList<Album> obtenerAlbum(String nombreMusico) {
+		/**
+		 * Obtiene los álbumes de un músico por su nombre artístico.
+		 *
+		 * @param nombreMusico nombre artístico del músico
+		 * @return lista de `Album`
+		 */
+			public ArrayList<Album> obtenerAlbum(String nombreMusico) {
 			ArrayList<Album> albums = new ArrayList<Album>();
 			String query = "SELECT al.idAlbum, al.titulo, al.ano, al.genero, al.imagen, al.idMusico "
 					+ "FROM album al WHERE al.idMusico IN (SELECT m.idMusico FROM musico m JOIN artista a ON m.idMusico = a.idArtista WHERE a.nombreArtistico = ?)";
@@ -343,7 +421,13 @@ private boolean hayConexion() {
 			return albums;
 		}
 
-		public ArrayList<Cancion> obtenerCanciones(String nombreAlbum) {
+		/**
+		 * Obtiene las canciones de un álbum por título.
+		 *
+		 * @param nombreAlbum título del álbum
+		 * @return lista de `Cancion`
+		 */
+			public ArrayList<Cancion> obtenerCanciones(String nombreAlbum) {
 			ArrayList<Cancion> canciones = new ArrayList<Cancion>();
 			String query = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, c.idAlbum, c.artistasInvitados "
 					+ "FROM audio a JOIN cancion c ON c.idCancion = a.idAudio "
@@ -366,7 +450,13 @@ private boolean hayConexion() {
 			return canciones;
 		}
 
-		public ArrayList<Podcast> obtenerPodcasts(String nomPodcaster) {
+		/**
+		 * Obtiene los podcasts asociados a un podcaster.
+		 *
+		 * @param nomPodcaster nombre artístico del podcaster
+		 * @return lista de `Podcast`
+		 */
+			public ArrayList<Podcast> obtenerPodcasts(String nomPodcaster) {
 			ArrayList<Podcast> podcasts = new ArrayList<Podcast>();
 			String query = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, p.colaboradores, p.idPodcaster "
 					+ "FROM audio a JOIN podcast p ON p.idPodcast = a.idAudio "
@@ -401,7 +491,13 @@ private boolean hayConexion() {
 			return podcasts;
 		}
 
-		public ArrayList<Playlist> obtenerPlaylists(int idCliente) {
+		/**
+		 * Obtiene las playlists de un cliente.
+		 *
+		 * @param idCliente id del cliente
+		 * @return lista de `Playlist`
+		 */
+			public ArrayList<Playlist> obtenerPlaylists(int idCliente) {
 			ArrayList<Playlist> playlists = new ArrayList<Playlist>();
 			String query = "SELECT * FROM playlist WHERE IdCliente = ?";
 			try (PreparedStatement consulta = conect.prepareStatement(query)) {
@@ -419,7 +515,13 @@ private boolean hayConexion() {
 			return playlists;
 		}
 
-		public ArrayList<Cancion> obtenerCancionesPlaylist(int idPlaylist) {
+		/**
+		 * Obtiene las canciones asociadas a una playlist.
+		 *
+		 * @param idPlaylist id de la playlist
+		 * @return lista de `Cancion`
+		 */
+			public ArrayList<Cancion> obtenerCancionesPlaylist(int idPlaylist) {
 			ArrayList<Cancion> cancionesPlaylist = new ArrayList<Cancion>();
 			String query = "SELECT a.idAudio,a.nombre,a.archivo,a.duracion,a.nReproducciones,c.idAlbum ,"
 					+ "c.artistasInvitados FROM `audio` a join cancion c on a.idAudio = c.idCancion "
@@ -442,7 +544,13 @@ private boolean hayConexion() {
 			return cancionesPlaylist;
 		}
 
-		public void insertarMusico(Musico m) {
+		/**
+		 * Inserta un nuevo músico: primero crea el registro en `artista` y
+		 * luego en `musico` con la característica correspondiente.
+		 *
+		 * @param m objeto `Musico` con los datos a insertar
+		 */
+			public void insertarMusico(Musico m) {
 			try (Statement stmt = conect.createStatement()) {
 				String queryArtista = "INSERT INTO artista (nombreArtistico, imagen, genero, descripcion) VALUES ('"
 						+ m.getNombreArt() + "', '" + m.getFoto() + "', '" + m.getGenero() + "', '" + m.getDescripcion()
@@ -466,7 +574,12 @@ private boolean hayConexion() {
 			}
 		}
 
-		public void insertarPodcaster(Podcaster p) {
+		/**
+		 * Inserta un podcaster creando primero `artista` y luego `podcaster`.
+		 *
+		 * @param p objeto `Podcaster`
+		 */
+			public void insertarPodcaster(Podcaster p) {
 			try (Statement stmt = conect.createStatement()) {
 				String queryArtista = "INSERT INTO artista (nombreArtistico, imagen, genero, descripcion) VALUES ('"
 						+ p.getNombreArt() + "', '" + p.getFoto() + "', '" + p.getGenero() + "', '" + p.getDescripcion()
@@ -489,7 +602,12 @@ private boolean hayConexion() {
 			}
 		}
 
-		public void insertarCancion(Cancion c) {
+		/**
+		 * Inserta una canción y su registro en `audio` y `cancion`.
+		 *
+		 * @param c objeto `Cancion` con la información necesaria
+		 */
+			public void insertarCancion(Cancion c) {
 			try (Statement stmt = conect.createStatement()) {
 				int horas = c.getDuracionSegundos() / 3600;
 				int minutos = (c.getDuracionSegundos() % 3600) / 60;
@@ -986,6 +1104,12 @@ private boolean hayConexion() {
 	/**
 	 * Verifica si un podcaster ya existe por nombre
 	 */
+	/**
+	 * Verifica si un podcaster ya existe por nombre.
+	 *
+	 * @param nombrePodcaster nombre artístico del podcaster
+	 * @return true si ya existe un podcaster con ese nombre
+	 */
 	public boolean existePodcaster(String nombrePodcaster) {
 		if (!hayConexion()) {
 			return false;
@@ -1030,6 +1154,12 @@ private boolean hayConexion() {
 		/**
 		 * Elimina un artista (y sus datos asociados en cascada)
 		 */
+		/**
+		 * Elimina un artista de la base de datos.
+		 *
+		 * @param idArtista id del artista a eliminar
+		 * @return true si se eliminó al menos un registro
+		 */
 		public boolean eliminarArtista(int idArtista) {
 			if (!hayConexion()) {
 				return false;
@@ -1049,6 +1179,12 @@ private boolean hayConexion() {
 
 		/**
 		 * Obtiene los detalles de un álbum por su título
+		 */
+		/**
+		 * Obtiene los detalles de un álbum por su título.
+		 *
+		 * @param titulo título del álbum
+		 * @return álbum encontrado o null
 		 */
 		public Album obtenerAlbumPorTitulo(String titulo) {
 			if (!hayConexion()) {
@@ -1072,6 +1208,17 @@ private boolean hayConexion() {
 
 		/**
 		 * Actualiza los datos de un álbum
+		 */
+		/**
+		 * Actualiza los datos de un álbum.
+		 *
+		 * @param idAlbum id del álbum
+		 * @param titulo nuevo título
+		 * @param ano año de publicación
+		 * @param genero género
+		 * @param imagen ruta/imagen del álbum
+		 * @param idMusico id del músico asociado
+		 * @return true si se actualizó correctamente
 		 */
 		public boolean actualizarAlbum(int idAlbum, String titulo, String ano, String genero, String imagen,
 				int idMusico) {
@@ -1097,6 +1244,12 @@ private boolean hayConexion() {
 		/**
 		 * Elimina un álbum
 		 */
+		/**
+		 * Elimina un álbum.
+		 *
+		 * @param idAlbum id del álbum a eliminar
+		 * @return true si se eliminó correctamente
+		 */
 		public boolean eliminarAlbum(int idAlbum) {
 			if (!hayConexion()) {
 				return false;
@@ -1116,6 +1269,12 @@ private boolean hayConexion() {
 
 		/**
 		 * Obtiene los detalles de una canción por su nombre
+		 */
+		/**
+		 * Obtiene los detalles de una canción por su nombre.
+		 *
+		 * @param nombreCancion nombre de la canción
+		 * @return canción encontrada o null
 		 */
 		public Cancion obtenerCancionPorNombre(String nombreCancion) {
 			if (!hayConexion()) {
@@ -1143,6 +1302,17 @@ private boolean hayConexion() {
 
 		/**
 		 * Actualiza los datos de una canción
+		 */
+		/**
+		 * Actualiza los datos de una canción.
+		 *
+		 * @param idCancion id de la canción
+		 * @param nombre nuevo nombre
+		 * @param archivo nueva ruta de archivo
+		 * @param duracion duración en formato texto
+		 * @param idAlbum nuevo id de álbum
+		 * @param artistasInvitados colaboradores
+		 * @return true si la actualización fue exitosa
 		 */
 		public boolean actualizarCancion(int idCancion, String nombre, String archivo, String duracion, int idAlbum,
 				String artistasInvitados) {
@@ -1176,6 +1346,12 @@ private boolean hayConexion() {
 		/**
 		 * Elimina una canción
 		 */
+		/**
+		 * Elimina una canción.
+		 *
+		 * @param idCancion id de la canción a eliminar
+		 * @return true si se eliminó correctamente
+		 */
 		public boolean eliminarCancion(int idCancion) {
 			if (!hayConexion()) {
 				return false;
@@ -1193,6 +1369,12 @@ private boolean hayConexion() {
 
 		/**
 		 * Actualiza el cliente (tipo Premium/Free, datos personales)
+		 */
+		/**
+		 * Actualiza el cliente (tipo Premium/Free y datos personales).
+		 *
+		 * @param c cliente con los datos actualizados
+		 * @return true si la actualización fue exitosa
 		 */
 		public boolean actualizarCliente(Cliente c) {
 			if (!hayConexion()) {
@@ -1219,6 +1401,12 @@ private boolean hayConexion() {
 
 		/**
 		 * Obtiene todos los audios favoritos de un cliente
+		 */
+		/**
+		 * Obtiene todos los audios favoritos de un cliente.
+		 *
+		 * @param idCliente id del cliente
+		 * @return lista de audios favoritos
 		 */
 		public ArrayList<Audio> obtenerFavoritos(int idCliente) {
 			ArrayList<Audio> favoritos = new ArrayList<>();
@@ -1248,6 +1436,11 @@ private boolean hayConexion() {
 		/**
 		 * Obtiene todos los audios de la base de datos.
 		 */
+		/**
+		 * Obtiene todos los audios de la base de datos.
+		 *
+		 * @return lista de audios
+		 */
 		public ArrayList<Audio> obtenerAudios() {
 			ArrayList<Audio> audios = new ArrayList<>();
 			if (!hayConexion()) {
@@ -1270,6 +1463,13 @@ private boolean hayConexion() {
 
 		/**
 		 * Verifica si un audio está en favoritos de un cliente
+		 */
+		/**
+		 * Verifica si un audio está en favoritos de un cliente.
+		 *
+		 * @param idCliente id del cliente
+		 * @param idAudio id del audio
+		 * @return true si el audio ya está en favoritos
 		 */
 		public boolean estaEnFavoritos(int idCliente, int idAudio) {
 			if (!hayConexion()) {
@@ -1294,6 +1494,13 @@ private boolean hayConexion() {
 		/**
 		 * Agrega un audio a favoritos de un cliente
 		 */
+		/**
+		 * Agrega un audio a favoritos de un cliente.
+		 *
+		 * @param idCliente id del cliente
+		 * @param idAudio id del audio
+		 * @return true si se agregó correctamente
+		 */
 		public boolean agregarAFavoritos(int idCliente, int idAudio) {
 			if (!hayConexion()) {
 				return false;
@@ -1316,6 +1523,13 @@ private boolean hayConexion() {
 
 		/**
 		 * Elimina un audio de favoritos de un cliente
+		 */
+		/**
+		 * Elimina un audio de favoritos de un cliente.
+		 *
+		 * @param idCliente id del cliente
+		 * @param idAudio id del audio
+		 * @return true si se eliminó correctamente
 		 */
 		public boolean eliminarDeFavoritos(int idCliente, int idAudio) {
 			if (!hayConexion()) {

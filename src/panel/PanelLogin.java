@@ -13,6 +13,10 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import vista.VentanaPrincipal;
 
+/**
+ * Panel de inicio de sesión: formulario para que el usuario inicie
+ * sesión o navegue al registro. Limpia campos al refrescar.
+ */
 public class PanelLogin extends JPanel implements PanelRefrescable {
 
 	private final VentanaPrincipal ventana;
@@ -20,6 +24,11 @@ public class PanelLogin extends JPanel implements PanelRefrescable {
 	private final JTextField txtUsuario;
 	private final JPasswordField txtContrasena;
 
+	/**
+	 * Panel de login: prepara campos y botones para iniciar sesión.
+	 *
+	 * @param ventana ventana principal para navegación y acceso al gestor
+	 */
 	public PanelLogin(VentanaPrincipal ventana) {
 		this.ventana = ventana;
 		this.gestor = ventana.getGestorCliente();
