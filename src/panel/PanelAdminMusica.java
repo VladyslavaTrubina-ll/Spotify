@@ -96,7 +96,7 @@ public class PanelAdminMusica extends JPanel implements PanelRefrescable {
         });
 
         // Formulario de artistas
-        JPanel formArtistas = new JPanel(new GridLayout(5, 2, 10, 10));
+        JPanel formArtistas = new JPanel(new GridLayout(6, 2, 10, 10));
         formArtistas.add(new JLabel("Nombre:"));
         txtNombreArtista = new JTextField();
         formArtistas.add(txtNombreArtista);
@@ -253,6 +253,12 @@ public class PanelAdminMusica extends JPanel implements PanelRefrescable {
             return;
         }
 
+        // Verificar si el artista ya existe
+        if (gestor.existeArtista(nombre)) {
+            txtResumen.setText("Error: El artista '" + nombre + "' ya existe");
+            return;
+        }
+
         Musico musico = new Musico(0, nombre, genero, descripcion, "", caracteristica);
         if (gestor.crearMusico(musico)) {
             txtResumen.setText("Artista agregado exitosamente");
@@ -311,6 +317,12 @@ public class PanelAdminMusica extends JPanel implements PanelRefrescable {
         
         if (!ano.matches("\\d{4}")) {
             txtResumen.setText("Error: El año debe tener 4 dígitos");
+            return;
+        }
+
+        // Verificar si el álbum ya existe
+        if (gestor.getControladorDB().existeAlbum(nombre)) {
+            txtResumen.setText("Error: El álbum '" + nombre + "' ya existe");
             return;
         }
 
@@ -383,6 +395,12 @@ public class PanelAdminMusica extends JPanel implements PanelRefrescable {
 
         if (nombre.isEmpty() || durationStr.isEmpty() || albumSeleccionado == null) {
             txtResumen.setText("Error: Ingrese todos los datos de la canción");
+            return;
+        }
+
+        // Verificar si la canción ya existe
+        if (gestor.getControladorDB().existeCancion(nombre)) {
+            txtResumen.setText("Error: La canción '" + nombre + "' ya existe");
             return;
         }
 
