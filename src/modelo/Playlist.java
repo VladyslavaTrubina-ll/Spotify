@@ -81,10 +81,10 @@ public class Playlist {
 	}
 
 	// Total duration in seconds (safely handles nulls)
-	public int getTotalDurationSeconds() {
+	public int obtenerDuracionTotalSegundos() {
 		int total = 0;
 		for (Cancion c : canciones) {
-			if (c != null) total += c.getDuratasecondi();
+			if (c != null) total += c.getDuracionSegundos();
 		}
 		return total;
 	}

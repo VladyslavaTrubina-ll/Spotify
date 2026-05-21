@@ -52,7 +52,7 @@ public class PanelFavoritos extends JPanel implements PanelRefrescable {
 			if (!e.getValueIsAdjusting()) {
 				Audio audio = listaFavoritos.getSelectedValue();
 				if (audio != null) {
-					txtDetalle.setText("Audio: " + audio.getNombreAudio() + "\nID: " + audio.getId() + "\nDuración: " + audio.durataConvertida());
+					txtDetalle.setText("Audio: " + audio.getNombreAudio() + "\nID: " + audio.getId() + "\nDuración: " + audio.duracionConvertida());
 				}
 			}
 		});

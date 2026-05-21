@@ -186,7 +186,7 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 			reproduciendo = true;
 			lblEstado.setText("Reproduciendo");
 			iniciarActualizacionUI();
-			lblProgreso.setText("00:00 / " + ReproductorAudio.formatearTiempo(cancion.getDuratasecondi()));
+			lblProgreso.setText("00:00 / " + ReproductorAudio.formatearTiempo(cancion.getDuracionSegundos()));
 		} catch (LineUnavailableException | UnsupportedAudioFileException | java.io.IOException e) {
 			JOptionPane.showMessageDialog(this, "No se pudo reproducir el archivo: " + e.getMessage());
 		}
@@ -282,7 +282,7 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 		txtDetalle.setText("Título: " + cancion.getNombreAudio() + "\n" +
 				"Audio: " + cancion.getArchivo() + "\n" +
 				"Imagen: " + cancion.getFoto() + "\n" +
-				"Duración: " + cancion.getDuratasecondi() + "\n" +
+				"Duración: " + cancion.getDuracionSegundos() + "\n" +
 				"Reproduciendo: " + reproduciendo);
 	}
 
@@ -295,7 +295,7 @@ public class PanelReproductor extends JPanel implements PanelRefrescable {
 			}
 			long microsegundos = clip.getMicrosecondPosition();
 			int segundos = (int) (microsegundos / 1_000_000L);
-			int total = cancion.getDuratasecondi();
+			int total = cancion.getDuracionSegundos();
 			if (total <= 0) {
 				total = 1;
 			}
