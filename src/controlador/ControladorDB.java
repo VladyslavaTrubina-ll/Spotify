@@ -898,8 +898,7 @@ private boolean hayConexion() {
 		/**
 		 * Actualiza los datos de un artista
 		 */
-		public boolean actualizarArtista(int idArtista, String nombreArtistico, String genero, String descripcion,
-				String imagen) {
+		public boolean actualizarArtista(int idArtista, String nombreArtistico, String genero, String descripcion, String imagen) {
 			if (!hayConexion()) {
 				return false;
 			}
@@ -917,6 +916,116 @@ private boolean hayConexion() {
 				return false;
 			}
 		}
+
+	/**
+	 * Verifica si un artista ya existe por nombre
+	 */
+	public boolean existeArtista(String nombreArtistico) {
+		if (!hayConexion()) {
+			return false;
+		}
+
+		String sql = "SELECT COUNT(*) FROM artista WHERE nombreArtistico = ?";
+		try (PreparedStatement ps = conect.prepareStatement(sql)) {
+			ps.setString(1, nombreArtistico);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			System.out.println("Error verificando artista: " + e.getMessage());
+		}
+		return false;
+	}
+
+	/**
+	 * Verifica si un álbum ya existe por nombre
+	 */
+	public boolean existeAlbum(String nombreAlbum) {
+		if (!hayConexion()) {
+			return false;
+		}
+
+		String sql = "SELECT COUNT(*) FROM album WHERE titulo = ?";
+		try (PreparedStatement ps = conect.prepareStatement(sql)) {
+			ps.setString(1, nombreAlbum);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			System.out.println("Error verificando álbum: " + e.getMessage());
+		}
+		return false;
+	}
+
+	/**
+	 * Verifica si una canción ya existe por nombre
+	 */
+	public boolean existeCancion(String nombreCancion) {
+		if (!hayConexion()) {
+			return false;
+		}
+
+		String sql = "SELECT COUNT(*) FROM audio WHERE nombre = ? AND tipo = 'Cancion'";
+		try (PreparedStatement ps = conect.prepareStatement(sql)) {
+			ps.setString(1, nombreCancion);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			System.out.println("Error verificando canción: " + e.getMessage());
+		}
+		return false;
+	}
+
+	/**
+	 * Verifica si un podcaster ya existe por nombre
+	 */
+	public boolean existePodcaster(String nombrePodcaster) {
+		if (!hayConexion()) {
+			return false;
+		}
+
+		String sql = "SELECT COUNT(*) FROM artista WHERE nombreArtistico = ? AND idArtista IN (SELECT idPodcaster FROM podcaster)";
+		try (PreparedStatement ps = conect.prepareStatement(sql)) {
+			ps.setString(1, nombrePodcaster);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			System.out.println("Error verificando podcaster: " + e.getMessage());
+		}
+		return false;
+	}
+
+	/**
+	 * Verifica si un podcast ya existe por nombre
+	 */
+	public boolean existePodcast(String nombrePodcast) {
+		if (!hayConexion()) {
+			return false;
+		}
+
+		String sql = "SELECT COUNT(*) FROM audio WHERE nombre = ? AND tipo = 'Podcast'";
+		try (PreparedStatement ps = conect.prepareStatement(sql)) {
+			ps.setString(1, nombrePodcast);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			System.out.println("Error verificando podcast: " + e.getMessage());
+		}
+		return false;
+	}
 
 		/**
 		 * Elimina un artista (y sus datos asociados en cascada)
