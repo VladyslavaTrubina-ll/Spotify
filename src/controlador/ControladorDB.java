@@ -444,8 +444,8 @@ private boolean hayConexion() {
 
 		public void insertarMusico(Musico m) {
 			try (Statement stmt = conect.createStatement()) {
-				String queryArtista = "INSERT INTO artista (nombreArtistico, genero, imagen, descripcion) VALUES ('"
-						+ m.getNombreArt() + "', '" + m.getGenero() + "', '" + m.getDescripcion() + "', '" + m.getFoto()
+				String queryArtista = "INSERT INTO artista (nombreArtistico, imagen, genero, descripcion) VALUES ('"
+						+ m.getNombreArt() + "', '" + m.getFoto() + "', '" + m.getGenero() + "', '" + m.getDescripcion()
 						+ "')";
 				stmt.executeUpdate(queryArtista, Statement.RETURN_GENERATED_KEYS);
 				try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -453,8 +453,12 @@ private boolean hayConexion() {
 					if (rs.next()) {
 						idArtista = rs.getInt(1);
 					}
+					String caracteristica = m.getComposicion();
+					if (caracteristica == null || (!"Solista".equalsIgnoreCase(caracteristica) && !"Grupo".equalsIgnoreCase(caracteristica))) {
+						caracteristica = "Solista";
+					}
 					String queryMusico = "INSERT INTO musico (idMusico, caracteristica) VALUES (" + idArtista + ", '"
-							+ m.getComposicion() + "')";
+							+ caracteristica + "')";
 					stmt.executeUpdate(queryMusico);
 				}
 			} catch (SQLException e) {
@@ -464,8 +468,8 @@ private boolean hayConexion() {
 
 		public void insertarPodcaster(Podcaster p) {
 			try (Statement stmt = conect.createStatement()) {
-				String queryArtista = "INSERT INTO artista (nombreArtistico, genero, descripcion, imagen) VALUES ('"
-						+ p.getNombreArt() + "', '" + p.getGenero() + "', '" + p.getDescripcion() + "', '" + p.getFoto()
+				String queryArtista = "INSERT INTO artista (nombreArtistico, imagen, genero, descripcion) VALUES ('"
+						+ p.getNombreArt() + "', '" + p.getFoto() + "', '" + p.getGenero() + "', '" + p.getDescripcion()
 						+ "')";
 				stmt.executeUpdate(queryArtista, Statement.RETURN_GENERATED_KEYS);
 				try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -514,10 +518,24 @@ private boolean hayConexion() {
 
 		public void insertarAlbum(Album a) {
 			try (Statement stmt = conect.createStatement()) {
-				String query = "INSERT INTO album (titulo, ano, genero, imagen, idMusico) VALUES ('" + a.getTitulo()
-						+ "', '" + a.getFechaPub() + "', '" + a.getGenero() + "', '" + a.getFoto() + "', " + a.getIdMusico()
-						+ ")";
-				stmt.executeUpdate(query);
+				String anno = a.getFechaPub();
+				if (anno == null) {
+					anno = "";
+				}
+				anno = anno.trim();
+				if (!anno.matches("\\d{4}")) {
+					throw new SQLException("Año inválido: " + anno);
+				}
+
+				String query = "INSERT INTO album (titulo, ano, genero, imagen, idMusico) VALUES (?, ?, ?, ?, ?)";
+				try (PreparedStatement ps = conect.prepareStatement(query)) {
+					ps.setString(1, a.getTitulo());
+					ps.setInt(2, Integer.parseInt(anno));
+					ps.setString(3, a.getGenero());
+					ps.setString(4, a.getFoto());
+					ps.setInt(5, a.getIdMusico());
+					ps.executeUpdate();
+				}
 			} catch (SQLException e) {
 				if (e instanceof SQLIntegrityConstraintViolationException) {
 					System.out.println("Álbum ya existente: " + a.getTitulo());
@@ -551,6 +569,88 @@ private boolean hayConexion() {
 				} else {
 					e.printStackTrace();
 				}
+			}
+		}
+
+		public boolean actualizarPodcaster(int idPodcaster, String nombre, String descripcion, String imagen) {
+			if (!hayConexion()) {
+				return false;
+			}
+
+			String sql = "UPDATE artista SET nombreArtistico = ?, descripcion = ?, imagen = ? WHERE idArtista = (SELECT idPodcaster FROM podcaster WHERE idPodcaster = ?)";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, nombre);
+				ps.setString(2, descripcion);
+				ps.setString(3, imagen);
+				ps.setInt(4, idPodcaster);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error actualizando podcaster: " + e.getMessage());
+				return false;
+			}
+		}
+
+		public boolean eliminarPodcaster(int idPodcaster) {
+			if (!hayConexion()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM podcaster WHERE idPodcaster = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idPodcaster);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando podcaster: " + e.getMessage());
+				return false;
+			}
+		}
+
+		public boolean actualizarPodcast(int idPodcast, String nombre, String archivo, int duracion, int numeroParticipantes, String descripcion, int idPodcaster) {
+			if (!hayConexion()) {
+				return false;
+			}
+
+			int horas = duracion / 3600;
+			int minutos = (duracion % 3600) / 60;
+			int segundos = duracion % 60;
+			String duracionTime = String.format("%02d:%02d:%02d", horas, minutos, segundos);
+
+			String sql = "UPDATE audio SET nombre = ?, archivo = ?, duracion = ? WHERE idAudio = ? AND idAudio IN (SELECT idPodcast FROM podcast WHERE idPodcast = ?)";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setString(1, nombre);
+				ps.setString(2, archivo);
+				ps.setString(3, duracionTime);
+				ps.setInt(4, idPodcast);
+				ps.setInt(5, idPodcast);
+				boolean result = ps.executeUpdate() > 0;
+
+				if (result) {
+					String sqlPodcast = "UPDATE podcast SET colaboradores = ? WHERE idPodcast = ?";
+					try (PreparedStatement ps2 = conect.prepareStatement(sqlPodcast)) {
+						ps2.setInt(1, numeroParticipantes);
+						ps2.setInt(2, idPodcast);
+						ps2.executeUpdate();
+					}
+				}
+				return result;
+			} catch (SQLException e) {
+				System.out.println("Error actualizando podcast: " + e.getMessage());
+				return false;
+			}
+		}
+
+		public boolean eliminarPodcast(int idPodcast) {
+			if (!hayConexion()) {
+				return false;
+			}
+
+			String sql = "DELETE FROM podcast WHERE idPodcast = ?";
+			try (PreparedStatement ps = conect.prepareStatement(sql)) {
+				ps.setInt(1, idPodcast);
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				System.out.println("Error eliminando podcast: " + e.getMessage());
+				return false;
 			}
 		}
 

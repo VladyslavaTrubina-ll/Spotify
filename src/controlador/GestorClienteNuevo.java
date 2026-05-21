@@ -254,6 +254,44 @@ public class GestorClienteNuevo {
         try { return controladordb.eliminarCancion(idCancion); } finally { controladordb.cerrarConexion(); }
     }
 
+    // ==================== PODCASTS ====================
+
+    public boolean crearPodcaster(Podcaster podcaster) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { controladordb.insertarPodcaster(podcaster); return true; } finally { controladordb.cerrarConexion(); }
+    }
+
+    public boolean actualizarPodcaster(int idPodcaster, String nombre, String descripcion, String imagen) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { return controladordb.actualizarPodcaster(idPodcaster, nombre, descripcion, imagen); } finally { controladordb.cerrarConexion(); }
+    }
+
+    public boolean eliminarPodcaster(int idPodcaster) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { return controladordb.eliminarPodcaster(idPodcaster); } finally { controladordb.cerrarConexion(); }
+    }
+
+    public boolean crearPodcast(Podcast podcast) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { controladordb.insertarPodcast(podcast); return true; } finally { controladordb.cerrarConexion(); }
+    }
+
+    public boolean actualizarPodcast(int idPodcast, String nombre, String archivo, int duracion, int numeroParticipantes, String descripcion, int idPodcaster) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { return controladordb.actualizarPodcast(idPodcast, nombre, archivo, duracion, numeroParticipantes, descripcion, idPodcaster); } finally { controladordb.cerrarConexion(); }
+    }
+
+    public boolean eliminarPodcast(int idPodcast) {
+        if (clienteActual == null || !esAdmin(clienteActual)) return false;
+        if (!controladordb.startConnection()) return false;
+        try { return controladordb.eliminarPodcast(idPodcast); } finally { controladordb.cerrarConexion(); }
+    }
+
     // ==================== ESTADÍSTICAS ====================
 
     public ArrayList<EstadisticaCancion> obtenerEstadisticasCanciones() {
@@ -278,5 +316,10 @@ public class GestorClienteNuevo {
         if (clienteActual == null || !esAdmin(clienteActual)) return new ArrayList<>();
         if (!controladordb.startConnection()) return new ArrayList<>();
         try { return controladordb.obtenerEstadisticasPlaylist(); } finally { controladordb.cerrarConexion(); }
+    }
+
+    // ==================== GETTER PARA CONTROLADOR DB ====================
+    public ControladorDB getControladorDB() {
+        return controladordb;
     }
 }
