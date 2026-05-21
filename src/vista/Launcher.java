@@ -15,14 +15,14 @@ public class Launcher {
     private static final String NOMBRE_BD = "spoty";
 
 
-        private static GestorCliente gestorCliente;
+        private static GestorClienteNuevo gestorCliente;
         private static ReproductorAudio reproductor;
         private static ControladorEntradaYSalida entrada;
         private static ArrayList<Audio> audiosReproductor;
 
         public static void main(String[] args) {
             entrada = new ControladorEntradaYSalida();
-            gestorCliente = new GestorCliente(NOMBRE_BD);
+            gestorCliente = new GestorClienteNuevo(NOMBRE_BD);
 
             mostrarPantallaBienvenida();
             menuPrincipal();
@@ -255,7 +255,7 @@ public class Launcher {
             System.out.println("\nPodcasts de " + elegido + ":");
             for (int i = 0; i < podcasts.size(); i++) {
                 Podcast pd = podcasts.get(i);
-                System.out.println((i + 1) + ". " + pd.getNombreAudio() + " [" + pd.durataConvertida() + "] - " + pd.getArchivo());
+                System.out.println((i + 1) + ". " + pd.getNombreAudio() + " [" + pd.duracionConvertida() + "] - " + pd.getArchivo());
             }
 
             System.out.println("\n1. Reproducir episodio");
@@ -267,17 +267,7 @@ public class Launcher {
             if (accion == 1) {
                 System.out.println("\nElige un episodio para reproducir:");
                 int sel = entrada.esValorMenuValido(1, podcasts.size());
-                // Preparar reproductor si es necesario
-                Cliente cliente = gestorCliente.getClienteActual();
-                if (reproductor == null && cliente != null) {
-                    reproductor = new ReproductorAudio(cliente.getId(), cliente.isEsPremium(), new controlador.ControladorDB(NOMBRE_BD), gestorCliente);
-                }
-                ArrayList<Audio> cola = new ArrayList<>();
-                cola.addAll(podcasts);
-                reproductor.establecerColaReproduccion(cola);
-                reproductor.saltarA(sel - 1);
-                reproductor.play();
-                System.out.println(reproductor.obtenerInformacionActual());
+                reproducirPodcastInteractivo(podcasts, sel - 1);
             } else if (accion == 2) {
                 System.out.println("\nElige un episodio para descargar:");
                 int sel = entrada.esValorMenuValido(1, podcasts.size());
@@ -360,7 +350,7 @@ public class Launcher {
             System.out.println("\nCanciones disponibles:");
             for (int i = 0; i < audiosReproductor.size(); i++) {
                 Audio audio = audiosReproductor.get(i);
-                System.out.println((i + 1) + ". " + audio.getNombreAudio() + " [" + audio.durataConvertida() + "] - " + audio.getArchivo());
+                System.out.println((i + 1) + ". " + audio.getNombreAudio() + " [" + audio.duracionConvertida() + "] - " + audio.getArchivo());
             }
 
             System.out.println("\n1. Reproducir canción");
@@ -432,6 +422,84 @@ public class Launcher {
         audios.add(new Cancion(1, "Cancion 1", "canciones/cancion1.wav", 12, 0, 0, null, "Cancion", "imagenes/imagen1.png"));
         audios.add(new Cancion(2, "Cancion 2", "canciones/cancion2.wav", 12, 0, 0, null, "Cancion", "imagenes/imagen2.gif"));
         return audios;
+    }
+
+    private static void reproducirPodcastInteractivo(ArrayList<Podcast> podcasts, int indexInicial) {
+        Cliente cliente = gestorCliente.getClienteActual();
+        if (cliente == null) {
+            System.out.println("\nDebes iniciar sesión primero.");
+            return;
+        }
+
+        if (reproductor == null) {
+            reproductor = new ReproductorAudio(cliente.getId(), cliente.isEsPremium(), new controlador.ControladorDB(NOMBRE_BD), gestorCliente);
+        }
+
+        ArrayList<Audio> cola = new ArrayList<>(podcasts);
+        reproductor.establecerColaReproduccion(cola);
+        reproductor.saltarA(indexInicial);
+        reproductor.play();
+
+        boolean reproduciendo = true;
+        while (reproduciendo) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            System.out.println("\n┌────────────────────────────────────────┐");
+            System.out.println("│      REPRODUCTOR DE PODCAST            │");
+            System.out.println("└────────────────────────────────────────┘");
+            System.out.println(reproductor.obtenerInformacionActual());
+
+            System.out.println("\n1. Pausar/Reanudar");
+            System.out.println("2. Siguiente episodio");
+            System.out.println("3. Episodio anterior");
+            System.out.println("4. Cambiar velocidad");
+            System.out.println("5. Volver a podcasters");
+
+            int opcion = entrada.esValorMenuValido(1, 5);
+
+            switch (opcion) {
+                case 1:
+                    if (reproductor.isEnReproduccion()) {
+                        reproductor.pause();
+                    } else {
+                        reproductor.reanudar();
+                    }
+                    break;
+                case 2:
+                    Audio siguiente = reproductor.siguiente();
+                    if (siguiente != null) {
+                        reproductor.play();
+                        System.out.println("Siguiente: " + siguiente.getNombreAudio());
+                    }
+                    break;
+                case 3:
+                    Audio anterior = reproductor.anterior();
+                    if (anterior != null) {
+                        reproductor.play();
+                        System.out.println("Anterior: " + anterior.getNombreAudio());
+                    }
+                    break;
+                case 4:
+                    System.out.println("\nVelocidades: 1. 0.5x  2. 1x  3. 1.5x  4. 2x");
+                    int vel = entrada.esValorMenuValido(1, 4);
+                    double velocidad = switch (vel) {
+                        case 1 -> 0.5;
+                        case 2 -> 1.0;
+                        case 3 -> 1.5;
+                        default -> 2.0;
+                    };
+                    reproductor.establecerVelocidad(velocidad);
+                    break;
+                case 5:
+                    reproductor.detener();
+                    reproduciendo = false;
+                    break;
+            }
+        }
     }
 
     private static void actualizarPremium() {
