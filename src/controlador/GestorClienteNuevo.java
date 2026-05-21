@@ -200,10 +200,28 @@ public class GestorClienteNuevo {
 
     // ==================== MÉTODOS ADMIN ====================
 
+    public boolean existeArtista(String nombreArtistico) {
+        if (nombreArtistico == null || nombreArtistico.trim().isEmpty()) {
+            return false;
+        }
+        if (!controladordb.startConnection()) return false;
+        try {
+            return controladordb.existeArtista(nombreArtistico.trim());
+        } finally {
+            controladordb.cerrarConexion();
+        }
+    }
+
     public boolean crearMusico(Musico musico) {
         if (clienteActual == null || !esAdmin(clienteActual)) return false;
         if (!controladordb.startConnection()) return false;
-        try { controladordb.insertarMusico(musico); return true; } finally { controladordb.cerrarConexion(); }
+        try {
+            if (controladordb.existeArtista(musico.getNombreArt())) {
+                return false;
+            }
+            controladordb.insertarMusico(musico);
+            return true;
+        } finally { controladordb.cerrarConexion(); }
     }
 
     public boolean actualizarArtista(int idArtista, String nombre, String genero, String descripcion, String imagen) {

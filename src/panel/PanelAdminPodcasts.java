@@ -181,6 +181,12 @@ public class PanelAdminPodcasts extends JPanel implements PanelRefrescable {
             return;
         }
 
+        // Verificar si el podcaster ya existe
+        if (gestor.getControladorDB().existePodcaster(nombre)) {
+            txtResumen.setText("Error: El podcaster '" + nombre + "' ya existe");
+            return;
+        }
+
         Podcaster podcaster = new Podcaster(0, nombre, genero, descripcion, "");
         if (gestor.crearPodcaster(podcaster)) {
             txtResumen.setText("Podcaster agregado exitosamente");
@@ -233,6 +239,12 @@ public class PanelAdminPodcasts extends JPanel implements PanelRefrescable {
 
         if (nombre.isEmpty() || duracionStr.isEmpty() || participantesStr.isEmpty()) {
             txtResumen.setText("Error: Ingrese todos los datos del podcast");
+            return;
+        }
+
+        // Verificar si el podcast ya existe
+        if (gestor.getControladorDB().existePodcast(nombre)) {
+            txtResumen.setText("Error: El podcast '" + nombre + "' ya existe");
             return;
         }
 
