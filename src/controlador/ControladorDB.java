@@ -27,17 +27,17 @@ public class ControladorDB {
   
   //Iniciar conexion
 	public boolean startConnection() {
-		boolean connectionEstabli = false;
+		boolean conexionestablecida = false;
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			conect = DriverManager.getConnection("jdbc:mysql://localhost/" + this.nombreDB + "?serverTimezone=UTC&useSSL=false", "root", "");
-			connectionEstabli = true;
+			conexionestablecida = true;
 		} catch (ClassNotFoundException e) {
 			System.out.println("No se encontró la librería de sql");
 		} catch (SQLException e) {
 			System.out.println("No se pudo conectar a la BD " + this.nombreDB + ": " + e.getMessage());
 		}
-		return connectionEstabli;
+		return conexionestablecida;
 	}
 
 	public boolean iniciarSesion(String alias, String contrasenaUsuario) {
@@ -45,7 +45,7 @@ public class ControladorDB {
 	}
 
 	public boolean sqlLogin(String nombreUsuario, String contrasenaUsuario) {
-		if (!hayConexionActiva()) {
+		if (!hayConexion()) {
 			return false;
 		}
 
@@ -67,7 +67,7 @@ public class ControladorDB {
 
 	public boolean sqlCrear(String nombre, String apellido, String alias, String contrasenaUsuario, Date fechaNacimiento,
 			String idioma) {
-		if (!hayConexionActiva()) {
+		if (!hayConexion()) {
 			return false;
 		}
 
@@ -93,7 +93,7 @@ public class ControladorDB {
 
 	public ArrayList<String> sqlArtistas() {
 		ArrayList<String> artistas = new ArrayList<>();
-		if (!hayConexionActiva()) {
+		if (!hayConexion()) {
 			return artistas;
 		}
 
@@ -110,7 +110,7 @@ public class ControladorDB {
 	}
 
 	public ResultSet datoArtista() {
-		if (!hayConexionActiva()) {
+		if (!hayConexion()) {
 			return null;
 		}
 
@@ -125,11 +125,11 @@ public class ControladorDB {
 	}
 
 	public boolean anadirPlaylist(String nombrePlaylist) {
-		if (!hayConexionActiva() || idClienteActual <= 0) {
+		if (!hayConexion() || idClienteActual <= 0) {
 			return false;
 		}
 
-		String sql = "INSERT INTO playlist (titulo, fechaCreacion, IdCliente) VALUES (?, CURRENT_DATE, ?)";
+		String sql = "INSERT INTO playlist (titulo, fechaCreacion, idCliente) VALUES (?, CURRENT_DATE, ?)";
 		try (PreparedStatement ps = conect.prepareStatement(sql)) {
 			ps.setString(1, nombrePlaylist);
 			ps.setInt(2, idClienteActual);
@@ -141,11 +141,11 @@ public class ControladorDB {
 	}
 
 	public boolean borrarPlaylist(String nombrePlaylist) {
-		if (!hayConexionActiva() || idClienteActual <= 0) {
+		if (!hayConexion() || idClienteActual <= 0) {
 			return false;
 		}
 
-		String sql = "DELETE FROM playlist WHERE titulo = ? AND IdCliente = ?";
+		String sql = "DELETE FROM playlist WHERE titulo = ? AND idCliente = ?";
 		try (PreparedStatement ps = conect.prepareStatement(sql)) {
 			ps.setString(1, nombrePlaylist);
 			ps.setInt(2, idClienteActual);
@@ -157,7 +157,7 @@ public class ControladorDB {
 	}
 
 	public boolean anadirCancionPlaylist(String nombreCancion, String nombrePlaylist) {
-		if (!hayConexionActiva() || idClienteActual <= 0) {
+		if (!hayConexion() || idClienteActual <= 0) {
 			return false;
 		}
 
@@ -237,6 +237,10 @@ public class ControladorDB {
 		this.idClienteActual = id;
 	}
 
+	public int getIdClienteActual() {
+		return idClienteActual;
+	}
+
 	private Integer resolverIdioma(String idioma) {
 			if (idioma == null || idioma.trim().isEmpty()) {
 				return null;
@@ -261,7 +265,7 @@ public class ControladorDB {
 			return null;
 		}
 
-		private boolean hayConexionActiva() {
+private boolean hayConexion() {
 			try {
 				return conect != null && !conect.isClosed();
 			} catch (SQLException e) {
@@ -343,7 +347,7 @@ public class ControladorDB {
 			ArrayList<Cancion> canciones = new ArrayList<Cancion>();
 			String query = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, c.idAlbum, c.artistasInvitados "
 					+ "FROM audio a JOIN cancion c ON c.idCancion = a.idAudio "
-					+ "WHERE c.idAlbum = (SELECT idAlbum FROM album WHERE titulo = ?)";
+					+ "WHERE c.idAlbum = (SELECT idAlbum FROM album WHERE titulo = ? LIMIT 1)";
 			try (PreparedStatement consulta = conect.prepareStatement(query)) {
 				consulta.setString(1, nombreAlbum);
 				try (ResultSet resultado = consulta.executeQuery()) {
@@ -366,7 +370,7 @@ public class ControladorDB {
 			ArrayList<Podcast> podcasts = new ArrayList<Podcast>();
 			String query = "SELECT a.idAudio, a.nombre, a.archivo, a.duracion, a.nReproducciones, p.colaboradores, p.idPodcaster "
 					+ "FROM audio a JOIN podcast p ON p.idPodcast = a.idAudio "
-					+ "WHERE p.idPodcaster = (SELECT a.idArtista FROM artista a JOIN podcaster p ON p.idPodcaster = a.idArtista WHERE a.nombreArtistico = ?)";
+					+ "WHERE p.idPodcaster = (SELECT a.idArtista FROM artista a JOIN podcaster p ON p.idPodcaster = a.idArtista WHERE a.nombreArtistico = ? LIMIT 1)";
 			try (PreparedStatement consulta = conect.prepareStatement(query)) {
 				consulta.setString(1, nomPodcaster);
 				try (ResultSet resultado = consulta.executeQuery()) {
@@ -474,7 +478,7 @@ public class ControladorDB {
 				}
 			} catch (SQLException e) {
 				if (e instanceof SQLIntegrityConstraintViolationException) {
-					System.out.println("Artista già esistente: " + p.getNombreArt());
+					System.out.println("Artista ya existente: " + p.getNombreArt());
 				} else {
 					e.printStackTrace();
 				}
@@ -483,12 +487,12 @@ public class ControladorDB {
 
 		public void insertarCancion(Cancion c) {
 			try (Statement stmt = conect.createStatement()) {
-				int ore = c.getDuratasecondi() / 3600;
-				int minuti = (c.getDuratasecondi() % 3600) / 60;
-				int secondi = c.getDuratasecondi() % 60;
-				String durataTime = String.format("%02d:%02d:%02d", ore, minuti, secondi);
+				int horas = c.getDuracionSegundos() / 3600;
+				int minutos = (c.getDuracionSegundos() % 3600) / 60;
+				int segundos = c.getDuracionSegundos() % 60;
+				String duracionTime = String.format("%02d:%02d:%02d", horas, minutos, segundos);
 				String queryAudio = "INSERT INTO audio (nombre, archivo, duracion, nReproducciones, tipo) VALUES ('"
-						+ c.getNombreAudio() + "', '" + c.getArchivo() + "', '" + durataTime + "', 0, 'Cancion')";
+					+ c.getNombreAudio() + "', '" + c.getArchivo() + "', '" + duracionTime + "', 0, 'Cancion')";
 				stmt.executeUpdate(queryAudio, Statement.RETURN_GENERATED_KEYS);
 				try (ResultSet rs = stmt.getGeneratedKeys()) {
 					int idAudio = 0;
@@ -501,7 +505,7 @@ public class ControladorDB {
 				}
 			} catch (SQLException e) {
 				if (e instanceof SQLIntegrityConstraintViolationException) {
-					System.out.println("Audio già esistente: " + c.getNombreAudio());
+					System.out.println("Audio ya existente: " + c.getNombreAudio());
 				} else {
 					e.printStackTrace();
 				}
@@ -516,7 +520,7 @@ public class ControladorDB {
 				stmt.executeUpdate(query);
 			} catch (SQLException e) {
 				if (e instanceof SQLIntegrityConstraintViolationException) {
-					System.out.println("Album già esistente: " + a.getTitulo());
+					System.out.println("Álbum ya existente: " + a.getTitulo());
 				} else {
 					e.printStackTrace();
 				}
@@ -525,12 +529,12 @@ public class ControladorDB {
 
 		public void insertarPodcast(Podcast p) {
 			try (Statement stmt = conect.createStatement()) {
-				int ore = p.getDuratasecondi() / 3600;
-				int minuti = (p.getDuratasecondi() % 3600) / 60;
-				int secondi = p.getDuratasecondi() % 60;
-				String durataTime = String.format("%02d:%02d:%02d", ore, minuti, secondi);
+				int horas = p.getDuracionSegundos() / 3600;
+				int minutos = (p.getDuracionSegundos() % 3600) / 60;
+				int segundos = p.getDuracionSegundos() % 60;
+				String duracionTime = String.format("%02d:%02d:%02d", horas, minutos, segundos);
 				String queryAudio = "INSERT INTO audio (nombre, archivo, duracion, nReproducciones, tipo) VALUES ('"
-						+ p.getNombreAudio() + "', '" + p.getArchivo() + "', '" + durataTime + "', 0, 'Podcast')";
+					+ p.getNombreAudio() + "', '" + p.getArchivo() + "', '" + duracionTime + "', 0, 'Podcast')";
 				stmt.executeUpdate(queryAudio, Statement.RETURN_GENERATED_KEYS);
 				try (ResultSet rs = stmt.getGeneratedKeys()) {
 					int idAudio = 0;
@@ -543,7 +547,7 @@ public class ControladorDB {
 				}
 			} catch (SQLException e) {
 				if (e instanceof SQLIntegrityConstraintViolationException) {
-					System.out.println("Audio già esistente: " + p.getNombreAudio());
+					System.out.println("Audio ya existente: " + p.getNombreAudio());
 				} else {
 					e.printStackTrace();
 				}
@@ -603,64 +607,64 @@ public class ControladorDB {
 			}
 		}
 
-		public ArrayList<StastisticaCancion> obtenerstatcanciones() {
-			ArrayList<StastisticaCancion> statisticascanciones = new ArrayList<StastisticaCancion>();
+
+
+
+		public ArrayList<EstadisticaCancion> obtenerEstadisticasCanciones() {
+			ArrayList<EstadisticaCancion> estadisticas = new ArrayList<>();
 			String query = "Select * from cancionesmasescuchadas";
 			try (Statement consulta = conect.createStatement(); ResultSet resultado = consulta.executeQuery(query)) {
 				while (resultado.next()) {
-					StastisticaCancion sta = new StastisticaCancion(resultado.getInt(1), resultado.getString(2),
-							null, resultado.getInt(3));
-					statisticascanciones.add(sta);
+					EstadisticaCancion e = new EstadisticaCancion(resultado.getInt(1), resultado.getString(2), null,
+						resultado.getInt(3));
+					estadisticas.add(e);
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-			return statisticascanciones;
+			return estadisticas;
 		}
 
-		public ArrayList<StatisticaAudio> obtenerstataudio() {
-			ArrayList<StatisticaAudio> statisticasAudios = new ArrayList<StatisticaAudio>();
+		public ArrayList<EstadisticaAudio> obtenerEstadisticasAudio() {
+			ArrayList<EstadisticaAudio> estadisticas = new ArrayList<>();
 			String query = "Select * from audiosmasescuchados";
 			try (Statement consulta = conect.createStatement(); ResultSet resultado = consulta.executeQuery(query)) {
 				while (resultado.next()) {
-					StatisticaAudio sta = new StatisticaAudio(resultado.getInt(1), resultado.getString(2),
-							resultado.getInt(4));
-					statisticasAudios.add(sta);
+					EstadisticaAudio e = new EstadisticaAudio(resultado.getInt(1), resultado.getString(2), resultado.getInt(4));
+					estadisticas.add(e);
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-			return statisticasAudios;
+			return estadisticas;
 		}
 
-		public ArrayList<StatisticaPodcast> obtenerstatPodcast() {
-			ArrayList<StatisticaPodcast> statisticasPodcast = new ArrayList<StatisticaPodcast>();
+		public ArrayList<EstadisticaPodcast> obtenerEstadisticasPodcast() {
+			ArrayList<EstadisticaPodcast> estadisticas = new ArrayList<>();
 			String query = "Select * from podcastmasescuchado";
 			try (Statement consulta = conect.createStatement(); ResultSet resultado = consulta.executeQuery(query)) {
 				while (resultado.next()) {
-					StatisticaPodcast sta = new StatisticaPodcast(resultado.getInt(1), null,
-							resultado.getString(2), resultado.getInt(3));
-					statisticasPodcast.add(sta);
+					EstadisticaPodcast e = new EstadisticaPodcast(resultado.getInt(1), resultado.getString(2), resultado.getInt(3));
+					estadisticas.add(e);
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-			return statisticasPodcast;
+			return estadisticas;
 		}
 
-		public ArrayList<StatisticaPlaylist> obtenerstatPlaylist() {
-			ArrayList<StatisticaPlaylist> statisticasPlaylist = new ArrayList<StatisticaPlaylist>();
+		public ArrayList<EstadisticaPlaylist> obtenerEstadisticasPlaylist() {
+			ArrayList<EstadisticaPlaylist> estadisticas = new ArrayList<>();
 			String query = "Select * from playlistmasescuchada ";
 			try (Statement consulta = conect.createStatement(); ResultSet resultado = consulta.executeQuery(query)) {
 				while (resultado.next()) {
-					StatisticaPlaylist sta = new StatisticaPlaylist(resultado.getInt(1), resultado.getString(2),
-							resultado.getInt(3));
-					statisticasPlaylist.add(sta);
+					EstadisticaPlaylist e = new EstadisticaPlaylist(resultado.getInt(1), resultado.getString(2), resultado.getInt(3));
+					estadisticas.add(e);
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-			return statisticasPlaylist;
+			return estadisticas;
 		}
 
 		// ============ MÉTODOS PARA VALIDACIÓN DE LÓGICA DE NEGOCIO ============
@@ -669,7 +673,7 @@ public class ControladorDB {
 		 * Cuenta el número de playlists que tiene un usuario Free
 		 */
 		public int contarPlaylistsUsuario(int idCliente) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return -1;
 			}
 
@@ -703,7 +707,7 @@ public class ControladorDB {
 		 * Registra la última reproducción de un audio por un usuario
 		 */
 		public boolean registrarUltimaReproduccion(int idCliente, int idAudio) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -742,7 +746,7 @@ public class ControladorDB {
 				return true;
 			}
 
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -771,7 +775,7 @@ public class ControladorDB {
 		 * Obtiene un artista por su nombre
 		 */
 		public Artista obtenerArtistaPorNombre(String nombreArtistico) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return null;
 			}
 
@@ -796,7 +800,7 @@ public class ControladorDB {
 		 */
 		public boolean actualizarArtista(int idArtista, String nombreArtistico, String genero, String descripcion,
 				String imagen) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -818,7 +822,7 @@ public class ControladorDB {
 		 * Elimina un artista (y sus datos asociados en cascada)
 		 */
 		public boolean eliminarArtista(int idArtista) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -838,7 +842,7 @@ public class ControladorDB {
 		 * Obtiene los detalles de un álbum por su título
 		 */
 		public Album obtenerAlbumPorTitulo(String titulo) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return null;
 			}
 
@@ -862,7 +866,7 @@ public class ControladorDB {
 		 */
 		public boolean actualizarAlbum(int idAlbum, String titulo, String ano, String genero, String imagen,
 				int idMusico) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -885,7 +889,7 @@ public class ControladorDB {
 		 * Elimina un álbum
 		 */
 		public boolean eliminarAlbum(int idAlbum) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -905,7 +909,7 @@ public class ControladorDB {
 		 * Obtiene los detalles de una canción por su nombre
 		 */
 		public Cancion obtenerCancionPorNombre(String nombreCancion) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return null;
 			}
 
@@ -933,7 +937,7 @@ public class ControladorDB {
 		 */
 		public boolean actualizarCancion(int idCancion, String nombre, String archivo, String duracion, int idAlbum,
 				String artistasInvitados) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -964,7 +968,7 @@ public class ControladorDB {
 		 * Elimina una canción
 		 */
 		public boolean eliminarCancion(int idCancion) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -982,7 +986,7 @@ public class ControladorDB {
 		 * Actualiza el cliente (tipo Premium/Free, datos personales)
 		 */
 		public boolean actualizarCliente(Cliente c) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -1009,7 +1013,7 @@ public class ControladorDB {
 		 */
 		public ArrayList<Audio> obtenerFavoritos(int idCliente) {
 			ArrayList<Audio> favoritos = new ArrayList<>();
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return favoritos;
 			}
 
@@ -1037,7 +1041,7 @@ public class ControladorDB {
 		 */
 		public ArrayList<Audio> obtenerAudios() {
 			ArrayList<Audio> audios = new ArrayList<>();
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return audios;
 			}
 
@@ -1059,7 +1063,7 @@ public class ControladorDB {
 		 * Verifica si un audio está en favoritos de un cliente
 		 */
 		public boolean estaEnFavoritos(int idCliente, int idAudio) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -1082,7 +1086,7 @@ public class ControladorDB {
 		 * Agrega un audio a favoritos de un cliente
 		 */
 		public boolean agregarAFavoritos(int idCliente, int idAudio) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
@@ -1105,7 +1109,7 @@ public class ControladorDB {
 		 * Elimina un audio de favoritos de un cliente
 		 */
 		public boolean eliminarDeFavoritos(int idCliente, int idAudio) {
-			if (!hayConexionActiva()) {
+			if (!hayConexion()) {
 				return false;
 			}
 
