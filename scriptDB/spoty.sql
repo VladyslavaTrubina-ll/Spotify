@@ -128,46 +128,39 @@ INSERT INTO idioma (descripcion) VALUES ('Español'), ('English'), ('Ruso');
 INSERT INTO artista (nombreArtistico, genero, descripcion) VALUES 
 ('Salvatore Ganacci', 'Electronic', 'DJ sueco-bosnio'), -- ID 1
 ('Nikow', 'Hip-Hop', 'Artista polaco'),             -- ID 2
-('Isabel LaRosa', 'Pop', 'Cantante estadounidense'), -- ID 3
-('Krymov', 'Electronic', 'Productor musical'),      -- ID 4
-('Joe Rogan', 'Podcast', 'Podcaster famoso'),       -- ID 5
-('Imagine Dragons', 'Rock', 'Banda de Las Vegas');  -- ID 6 (NUEVO GRUPO)
+('Joe Rogan', 'Podcast', 'Podcaster famoso'),       -- ID 3
+('Imagine Dragons', 'Rock', 'Banda de Las Vegas');  -- ID 4 (NUEVO GRUPO)
 
 INSERT INTO musico (idMusico, caracteristica) VALUES 
 (1, 'Solista'), 
 (2, 'Solista'), 
-(3, 'Solista'), 
-(4, 'Solista'), 
-(6, 'Grupo'); -- Asociamos ID 6 como Grupo
+(4, 'Grupo'); -- Asociamos ID 4 como Grupo
 
-INSERT INTO podcaster (idPodcaster) VALUES (5);
+INSERT INTO podcaster (idPodcaster) VALUES (3);
 
 -- 3. AUDIO (Añadimos la canción del grupo)
 INSERT INTO audio (nombre, duracion, archivo, tipo) VALUES 
 ('Talk', '00:03:00', 'talk.mp3', 'Cancion'),           -- ID 1
 ('Rozmova z mistom', '00:03:20', 'rozmova.mp3', 'Cancion'), -- ID 2
-('Older', '00:02:45', 'older.mp3', 'Cancion'),         -- ID 3
-('You', '00:03:15', 'you.mp3', 'Cancion'),             -- ID 4
-('JRE #2000', '02:30:00', 'jre2000.mp3', 'Podcast'),   -- ID 5
-('Believer', '00:03:24', 'believer.mp3', 'Cancion');   -- ID 6 (NUEVA CANCIÓN)
+('JRE #2000', '02:30:00', 'jre2000.mp3', 'Podcast'),   -- ID 3
+('Believer', '00:03:24', 'believer.mp3', 'Cancion');   -- ID 4
 
 -- 4. ALBUM (Añadimos álbum del grupo)
 INSERT INTO album (titulo, ano, genero, idMusico) VALUES 
 ('Culturally Appropriate', 2022, 'Electronic', 1),
-('Evolve', 2017, 'Rock', 6); -- Álbum del grupo Imagine Dragons (ID 6)
+('Evolve', 2017, 'Rock', 4); -- Álbum del grupo Imagine Dragons (ID 4)
 
 -- 5. CANCION y PODCAST (Relacionamos los audios con sus tablas hijas)
 INSERT INTO cancion (idCancion, idAlbum, artistasInvitados) VALUES 
 (1, 1, NULL), 
 (2, NULL, NULL), 
-(3, NULL, NULL), 
-(4, NULL, NULL),
-(6, 2, 'Lil Wayne'); -- Canción "Believer" en Álbum "Evolve" con invitado
+(4, 2, 'Lil Wayne'); -- Canción "Believer" en Álbum "Evolve" con invitado
 
-INSERT INTO podcast (idPodcast, colaboradores, idPodcaster) VALUES (5, 1, 5);
+INSERT INTO podcast (idPodcast, colaboradores, idPodcaster) VALUES (3, 1, 3);
 
 -- 6. CLIENTE y PREMIUM
 INSERT INTO cliente (nombre, apellidos, usuario, contrasena, fechaNacimiento, idIdioma) VALUES 
+('Admin', 'Sistema', 'admin', 'admin', '2000-01-01', 1),
 ('Juan', 'Pérez', 'juanito88', 'hash_pass_123', '1995-05-10', 1),
 ('Elena', 'Gómez', 'elena_g', 'secure_pass_456', '2000-08-22', 2);
 
@@ -181,12 +174,11 @@ INSERT INTO playlist (titulo, fechaCreacion, IdCliente) VALUES
 
 INSERT INTO playlist_canciones (idCancion, idPlaylist, fechaPlaylist_cancion) VALUES 
 (1, 1, CURDATE()), -- Talk en la playlist 1
-(6, 1, CURDATE()), -- Believer en la playlist 1
-(6, 2, CURDATE()); -- Believer en la playlist 2
+(4, 1, CURDATE()), -- Believer en la playlist 1
+(4, 2, CURDATE()); -- Believer en la playlist 2
 
 INSERT INTO favoritos (idCliente, idAudio) VALUES 
-(1, 3), -- Juan le dio like a Older
-(2, 6); -- Elena le dio like a Believer
+(2, 4); -- Elena le dio like a Believer
 
 ----------------------------------------------------------------------------------------------------
 -- ===== VISTAS PARA ESTADÍSTICAS =====
